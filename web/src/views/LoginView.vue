@@ -6,6 +6,7 @@ import type { CaptchaResponse, ScheduleItem } from '@selcos/shared';
 import { errorMessage, http } from '@/api/http';
 import { useAuthStore } from '@/stores/auth';
 import { useAppInfoStore } from '@/stores/appInfo';
+import ThemeToggle from '@/components/ThemeToggle.vue';
 
 const router = useRouter();
 const message = useMessage();
@@ -73,7 +74,10 @@ onUnmounted(() => clearInterval(timer));
 <template>
   <div class="login-bg min-h-screen px-4 py-6 md:py-12">
     <div class="mx-auto max-w-5xl">
-      <header class="mb-6 text-white text-center md:text-left">
+      <header class="relative mb-6 text-white text-center md:text-left">
+        <div class="flex justify-end md:absolute md:right-0 md:top-0 mb-2 md:mb-0">
+          <ThemeToggle />
+        </div>
         <div class="text-sm opacity-90 tracking-widest">亞東科技大學</div>
         <h1 class="m-0 text-3xl md:text-4xl font-extrabold">
           選課系統

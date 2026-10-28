@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { NEmpty, NSpin, useOsTheme } from 'naive-ui';
+import { NEmpty, NSpin } from 'naive-ui';
 import type { CourseListItem } from '@selcos/shared';
-import { COURSE_KIND_COLORS } from '@/courseKind';
+import { useKindColor } from '@/composables/useKindColor';
 import { useSelectionStore } from '@/stores/selection';
 
 /** 課程清單（舊系統 #cos_list）：hover 預覽節次與學分，點選開啟課程資訊 */
@@ -9,9 +9,8 @@ defineProps<{ items: CourseListItem[]; loading: boolean }>();
 const emit = defineEmits<{ select: [course: CourseListItem] }>();
 
 const selection = useSelectionStore();
-const osTheme = useOsTheme();
-const colorOf = (c: CourseListItem) =>
-  COURSE_KIND_COLORS[c.label.kind][osTheme.value === 'dark' ? 'dark' : 'light'];
+const kindColor = useKindColor();
+const colorOf = (c: CourseListItem) => kindColor(c.label.kind);
 
 function select(course: CourseListItem) {
   // 手機沒有 hover：點選時先標示節次，再開課程資訊

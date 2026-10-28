@@ -6,15 +6,16 @@ import {
   NGlobalStyle,
   NMessageProvider,
   darkTheme,
-  useOsTheme,
   zhTW,
   dateZhTW,
 } from 'naive-ui';
 import { themeOverrides } from './theme';
 import { useAppInfoStore } from './stores/appInfo';
+import { useThemeStore } from './stores/theme';
 
-const osTheme = useOsTheme();
-const theme = computed(() => (osTheme.value === 'dark' ? darkTheme : null));
+// 亮色／暗色：預設跟隨系統（手機、電腦自動切換時即時跟著變），也可手動指定
+const themeStore = useThemeStore();
+const theme = computed(() => (themeStore.isDark ? darkTheme : null));
 
 const appInfo = useAppInfoStore();
 onMounted(() => appInfo.load().catch(() => undefined));

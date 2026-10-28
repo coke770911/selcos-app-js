@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useOsTheme } from 'naive-ui';
 import type { SelectedCourse } from '@selcos/shared';
-import { COURSE_KIND_COLORS, PERIODS } from '@/courseKind';
+import { PERIODS } from '@/courseKind';
+import { useKindColor } from '@/composables/useKindColor';
 import { useSelectionStore } from '@/stores/selection';
 
 /**
@@ -13,7 +13,7 @@ const props = defineProps<{ courses: SelectedCourse[] }>();
 const emit = defineEmits<{ select: [course: SelectedCourse] }>();
 
 const selection = useSelectionStore();
-const osTheme = useOsTheme();
+const kindColor = useKindColor();
 const DAYS = ['一', '二', '三', '四', '五', '六', '日'];
 
 /** 節次代碼（例如 301）→ 該節的課 */
@@ -35,9 +35,7 @@ function cellClass(code: string) {
 function chipStyle(c: SelectedCourse) {
   if (c.crossDisciplinary) return { '--chip': '#14b8c4' };
   if (c.foreignLanguage === '英語') return { '--chip': '#f07a8c' };
-  return {
-    '--chip': COURSE_KIND_COLORS[c.label.kind][osTheme.value === 'dark' ? 'dark' : 'light'],
-  };
+  return { '--chip': kindColor(c.label.kind) };
 }
 </script>
 

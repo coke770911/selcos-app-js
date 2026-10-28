@@ -1,8 +1,8 @@
 import { defineConfig, presetWind3 } from 'unocss';
 
 export default defineConfig({
-  // dark: 跟著系統深色模式（與 Naive UI 的 useOsTheme 一致）
-  presets: [presetWind3({ dark: 'media' })],
+  // dark: 由 <html class="dark"> 控制（stores/theme.ts 依跟隨系統／亮色／暗色設定）
+  presets: [presetWind3({ dark: 'class' })],
   theme: {
     colors: {
       brand: '#7C5CFF',

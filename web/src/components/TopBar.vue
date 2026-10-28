@@ -5,6 +5,7 @@ import { NButton, NTag } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
 import { useSelectionStore } from '@/stores/selection';
 import NoticeDialog from './NoticeDialog.vue';
+import ThemeToggle from './ThemeToggle.vue';
 
 const auth = useAuthStore();
 const selection = useSelectionStore();
@@ -84,6 +85,7 @@ onUnmounted(() => clearInterval(timer));
         [ 上 {{ auth.me?.credit?.max ?? '–' }} / 下 {{ auth.me?.credit?.min ?? '–' }} ]
       </div>
 
+      <ThemeToggle />
       <NButton size="small" round type="error" @click="showLogoutConfirm = true">登出</NButton>
     </div>
 
