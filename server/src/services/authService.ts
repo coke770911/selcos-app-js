@@ -13,11 +13,15 @@ import type { LdapAuthenticate } from '../auth/ldap.js';
 import type { SessionClaims, TokenService } from '../auth/token.js';
 import type { SessionService } from '../auth/session.js';
 import type { AuthRepository } from '../db/repositories/authRepository.js';
+import type { SelectionContextRepository } from '../db/repositories/selectionContextRepository.js';
+import { buildSelectionContext, type SelectionContextStore } from './selectionContext.js';
 
 export interface AuthServiceDeps {
   captcha: CaptchaService;
   ldap: LdapAuthenticate;
   repo: AuthRepository;
+  contextRepo: SelectionContextRepository;
+  contexts: SelectionContextStore;
   sessions: SessionService;
   tokens: TokenService;
   adminAccounts: string[];
@@ -58,9 +62,19 @@ export function createAuthService(deps: AuthServiceDeps) {
       const setting = await deps.repo.findSetting(isAdmin);
       if (!setting) throw new AppError(403, ERROR_CODES.SYSTEM_CLOSED, '選課系統目前尚未開放。');
 
-      // TODO 階段 2：年級／延修／轉學生開放條件、問卷檢查、修課資料與學分上下限（SelectionContextService）
-
       const mode = toMode(setting.sss_type);
+
+      // 年級／延修／轉學生開放條件、問卷、修課資料、學分上下限（舊系統 process.php 後半段）
+      const built = await buildSelectionContext({
+        repo: deps.contextRepo,
+        student,
+        setting,
+        mode,
+        isAdmin,
+      });
+      if (!built.ok) throw new AppError(403, ERROR_CODES.NOT_ELIGIBLE, built.message);
+      const { context } = built;
+
       const me: MeResponse = {
         expiresAt: new Date(Date.now() + deps.ttlSeconds * 1000).toISOString(),
         user: {
@@ -72,8 +86,10 @@ export function createAuthService(deps: AuthServiceDeps) {
           degree: Number(student.degree),
           role: isAdmin ? 'admin' : 'user',
           adminId: account.adminId,
+          currentDegree: context.currentDegree,
         },
-        env: { mode, modeName: SELCOS_MODE_NAME[mode], smtr: String(setting.sss_smtr).trim() },
+        env: { mode, modeName: SELCOS_MODE_NAME[mode], smtr: context.smtr },
+        credit: context.credit,
       };
 
       // 先寫登入紀錄，成功後才登記 token，避免寫入失敗時留下沒有 token 的登入
@@ -86,6 +102,7 @@ export function createAuthService(deps: AuthServiceDeps) {
         admin: account.adminId ?? 'user',
       });
 
+      await deps.contexts.save(context, deps.ttlSeconds);
       const jti = await deps.sessions.start(me.user.stdNo, me, deps.ttlSeconds);
       const claims: SessionClaims = {
         sub: me.user.stdNo,

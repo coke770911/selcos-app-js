@@ -6,7 +6,9 @@ import { createSessionService, type SessionService } from './auth/session.js';
 import { createTokenService, type TokenService } from './auth/token.js';
 import { authRepository } from './db/repositories/authRepository.js';
 import { publicRepository, type PublicRepository } from './db/repositories/publicRepository.js';
+import { selectionContextRepository } from './db/repositories/selectionContextRepository.js';
 import { createAuthService, type AuthService } from './services/authService.js';
+import { createSelectionContextStore } from './services/selectionContext.js';
 
 export interface AppDeps {
   publicRepo: PublicRepository;
@@ -27,6 +29,8 @@ export function createDeps(): AppDeps {
     captcha,
     ldap: ldapAuthenticate,
     repo: authRepository,
+    contextRepo: selectionContextRepository,
+    contexts: createSelectionContextStore(cache),
     sessions,
     tokens,
     adminAccounts: env.ADMIN_ACCOUNTS,

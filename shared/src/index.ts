@@ -42,6 +42,14 @@ export interface SessionUser {
   role: Role;
   /** 管理員代登時的管理員帳號 */
   adminId?: string;
+  /** 選課用年級（預選第一學期會虛擬升一年級、延修生最多 4） */
+  currentDegree: number;
+}
+
+/** 本次可選學分上下限 */
+export interface CreditLimits {
+  max: number;
+  min: number;
 }
 
 export interface SelcosEnv {
@@ -57,6 +65,7 @@ export interface LoginResponse {
   expiresAt: string;
   user: SessionUser;
   env: SelcosEnv;
+  credit: CreditLimits;
 }
 
 export type MeResponse = Omit<LoginResponse, 'token'>;
@@ -68,6 +77,8 @@ export const ERROR_CODES = {
   LOGIN_FAILED: 'LOGIN_FAILED',
   NOT_ENROLLED: 'NOT_ENROLLED',
   SYSTEM_CLOSED: 'SYSTEM_CLOSED',
+  /** 尚未開放此年級、問卷未填等 */
+  NOT_ELIGIBLE: 'NOT_ELIGIBLE',
   UNAUTHORIZED: 'UNAUTHORIZED',
   /** 同一帳號在其他地方登入，此 token 已被取代 */
   SESSION_REPLACED: 'SESSION_REPLACED',

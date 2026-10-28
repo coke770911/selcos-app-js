@@ -34,6 +34,7 @@ cp server/.env.example server/.env   # 填入 TEST_DB_* 測試機帳密與 JWT_S
 npm run check:db -w server -- 學號    # 測試機連線與學籍查詢（只做 SELECT）
 npm run check:ldap -w server -- 帳號  # AD 驗證
 npm run check:cache -w server         # 共用快取（CACHE.tb_Session）讀寫檢查
+npm run compare:context -w server -- 200  # 選課前置資料新舊邏輯比對（測試機抽樣，只讀）
 npm run db:pull -w server             # 從測試機反向產生 Prisma schema
 npm run db:generate -w server
 npm run dev:server                    # http://localhost:3000/api/health

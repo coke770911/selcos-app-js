@@ -62,8 +62,11 @@ onUnmounted(() => clearInterval(timer));
         ⏱ 選課時間：{{ countdown }}
       </div>
 
-      <!-- 學分：階段 2 接上 SelectionContext 後顯示實際數字 -->
-      <div class="text-sm">📚 目前學分 – [ 上 – / 下 – ]</div>
+      <!-- 目前學分在加退選功能完成後顯示（階段 4） -->
+      <div class="text-sm">
+        📚 目前學分 – [ 上 {{ auth.me?.credit?.max ?? '–' }} / 下
+        {{ auth.me?.credit?.min ?? '–' }} ]
+      </div>
 
       <NButton size="small" round type="error" @click="showLogoutConfirm = true">登出</NButton>
     </div>

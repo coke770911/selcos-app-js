@@ -9,7 +9,9 @@ import type {
   SelcosSettingRow,
   StudentRow,
 } from '../src/db/repositories/authRepository.js';
+import type { SelectionContextRepository } from '../src/db/repositories/selectionContextRepository.js';
 import { createAuthService } from '../src/services/authService.js';
+import { createSelectionContextStore } from '../src/services/selectionContext.js';
 import type { AppDeps } from '../src/container.js';
 
 export const STUDENT: StudentRow = {
@@ -28,12 +30,23 @@ export const STUDENT: StudentRow = {
   grad_year: '4',
 };
 
+// 階段 2 起登入會檢查開放條件：假時段需開放 STUDENT 的年級（2 年級）
 export const SETTING: SelcosSettingRow = {
   sss_type: '2',
   sss_smtr: '1142',
   sss_state: true,
   sss_beginTime: new Date(),
   sss_endTime: new Date(),
+  sss_2degree: 'Y',
+  chk_question: 'N',
+};
+
+/** 假的選課前置資料：一般在學生，無修課紀錄，學分 25／15 */
+export const fakeContextRepo: SelectionContextRepository = {
+  findCourseRecords: async () => [],
+  findCreditLimit: async () => ({ max_credit: 25, min_credit: 15 }),
+  findMustCourses: async () => [],
+  hasQuestionnaire: async () => true,
 };
 
 /** 假的 AD：密碼為 "pw" 才通過 */
@@ -62,6 +75,8 @@ export function makeDeps(repoOverrides: Partial<AuthRepository> = {}) {
     captcha,
     ldap: fakeLdap,
     repo,
+    contextRepo: fakeContextRepo,
+    contexts: createSelectionContextStore(cache),
     sessions,
     tokens,
     adminAccounts: ['fz083'],
