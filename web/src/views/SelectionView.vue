@@ -55,31 +55,32 @@ function onInfoClosed(visible: boolean) {
 }
 
 // ---- 加退選結果（同舊系統以彈窗顯示成功或失敗原因） ----
-const result = ref<{ ok: boolean; text: string } | null>(null);
-const showResult = computed({
-  get: () => result.value !== null,
-  set: (v) => {
-    if (!v) result.value = null;
-  },
-});
+// 內容與顯示分開：關閉時只隱藏，淡出動畫期間內容不會變成空白的「無法完成」
+const result = ref<{ ok: boolean; text: string }>({ ok: true, text: '' });
+const showResult = ref(false);
+
+function showOutcome(ok: boolean, text: string) {
+  result.value = { ok, text };
+  showResult.value = true;
+}
 
 const key = (c: CourseKey) => ({ cosId: c.cosId, cosClass: c.cosClass, cosTerm: c.cosTerm });
 
 async function add(info: CourseInfo) {
   try {
     await selection.add(key(info));
-    result.value = { ok: true, text: '加選成功！' };
+    showOutcome(true, '加選成功！');
   } catch (err) {
-    result.value = { ok: false, text: errorMessage(err) };
+    showOutcome(false, errorMessage(err));
   }
 }
 
 async function dropNow(info: CourseInfo) {
   try {
     await selection.drop(key(info));
-    result.value = { ok: true, text: '退選完成！' };
+    showOutcome(true, '退選完成！');
   } catch (err) {
-    result.value = { ok: false, text: errorMessage(err) };
+    showOutcome(false, errorMessage(err));
   }
 }
 
@@ -151,11 +152,11 @@ function openFromTimetable(c: SelectedCourse) {
 
     <NoticeDialog
       v-model:show="showResult"
-      :type="result?.ok ? 'success' : 'error'"
-      :title="result?.ok ? '完成' : '無法完成'"
+      :type="result.ok ? 'success' : 'error'"
+      :title="result.ok ? '完成' : '無法完成'"
       dismissible
     >
-      {{ result?.text }}
+      {{ result.text }}
     </NoticeDialog>
 
     <NoticeDialog v-model:show="showReminder" title="重要提醒" positive-text="關閉">

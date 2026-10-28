@@ -4,7 +4,6 @@ import { NSpin, NTag } from 'naive-ui';
 import type { CourseInfo, CourseKey } from '@selcos/shared';
 import { coursesApi } from '@/api/courses';
 import { errorMessage } from '@/api/http';
-import { WEEKDAYS } from '@/courseKind';
 import NoticeDialog from './NoticeDialog.vue';
 
 /** 課程資訊（舊系統 selcos_cos_info.php）：從清單開啟為加選、從課表開啟為退選 */
@@ -40,12 +39,8 @@ const actionText = computed(() => {
   return info.value.actions.drop ? '退選' : null;
 });
 
-/** 節次代碼 101 → 星期一第1節 */
-const periodText = computed(() =>
-  (info.value?.periods ?? [])
-    .map((p) => `${WEEKDAYS[Number(p[0]) - 1]?.replace('星期', '') ?? p[0]}${Number(p.slice(1))}`)
-    .join('、'),
-);
+/** 上課時間沿用舊系統的節次代碼（星期 1–7 + 節次 01–15），例如 103 = 星期一第 3 節 */
+const periodText = computed(() => (info.value?.periods ?? []).join(', '));
 
 function onPositive() {
   if (!info.value) return;
