@@ -71,9 +71,9 @@ onUnmounted(() => clearInterval(timer));
         ⏱ 選課時間：{{ countdown }}
       </div>
 
-      <!-- 目前學分在加退選功能完成後顯示（階段 4） -->
+      <!-- 目前學分與上下限；預覽時顯示學分增減（舊系統 #now_credit、#credit_num） -->
       <div class="text-sm">
-        📚 目前學分 –
+        📚 目前學分 {{ selection.state?.credit.now ?? '–' }}
         <strong
           v-if="creditDelta"
           class="delta"

@@ -15,7 +15,8 @@
     "check:ldap": "tsx scripts/check-ldap.ts",
     "check:cache": "tsx scripts/check-cache.ts",
     "compare:context": "tsx scripts/compare-context.ts",
-    "compare:label": "tsx scripts/compare-course-label.ts"
+    "compare:label": "tsx scripts/compare-course-label.ts",
+    "compare:enroll": "tsx scripts/compare-enroll-rules.ts"
   },
   "dependencies": {
     "@prisma/adapter-mssql": "^7.10.1",

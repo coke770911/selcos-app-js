@@ -150,6 +150,28 @@ export interface CourseInfo extends CourseKey {
   actions: { add: boolean; drop: boolean };
 }
 
+/** 課表上的一門課 */
+export interface SelectedCourse extends CourseKey {
+  name: string;
+  credit: number;
+  periods: string[];
+  label: CourseLabel;
+  foreignLanguage: string;
+  crossDisciplinary: boolean;
+}
+
+/** 目前課表與學分（加退選後回傳最新狀態） */
+export interface SelectionState {
+  courses: SelectedCourse[];
+  credit: { now: number; max: number; min: number };
+}
+
+export interface EnrollRequest {
+  cosId: string;
+  cosClass: string;
+  cosTerm: string;
+}
+
 /** API 錯誤代碼 */
 export const ERROR_CODES = {
   BAD_REQUEST: 'BAD_REQUEST',
@@ -159,6 +181,8 @@ export const ERROR_CODES = {
   SYSTEM_CLOSED: 'SYSTEM_CLOSED',
   /** 尚未開放此年級、問卷未填等 */
   NOT_ELIGIBLE: 'NOT_ELIGIBLE',
+  /** 加退選規則不通過（衝堂、學分上限、人數已滿…） */
+  ENROLL_REJECTED: 'ENROLL_REJECTED',
   UNAUTHORIZED: 'UNAUTHORIZED',
   /** 同一帳號在其他地方登入，此 token 已被取代 */
   SESSION_REPLACED: 'SESSION_REPLACED',

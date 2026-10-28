@@ -8,6 +8,7 @@ import { AppError } from './errors.js';
 import type { AppDeps } from './container.js';
 import { authRouter } from './routes/auth.js';
 import { coursesRouter } from './routes/courses.js';
+import { selectionRouter } from './routes/selection.js';
 import { serveWeb } from './web.js';
 
 export interface AppOptions {
@@ -57,6 +58,7 @@ export function createApp(deps: AppDeps, options: AppOptions = {}) {
 
   app.use('/api/auth', authRouter(deps));
   app.use('/api/courses', coursesRouter(deps));
+  app.use('/api/selection', selectionRouter(deps));
 
   app.use('/api', (_req, res) => {
     const body: ApiError = { code: ERROR_CODES.NOT_FOUND, message: '找不到此 API' };

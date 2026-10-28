@@ -14,6 +14,14 @@ import { createAuthService } from '../src/services/authService.js';
 import { createSelectionContextStore } from '../src/services/selectionContext.js';
 import { createCourseService } from '../src/services/courseService.js';
 import type { CourseRepository, CourseRow } from '../src/db/repositories/courseRepository.js';
+import type {
+  CourseKeyParams,
+  EnrollCourseRow,
+  EnrollmentRepository,
+  EnrollmentTx,
+  SelectedRow,
+} from '../src/db/repositories/enrollmentRepository.js';
+import { createEnrollmentService } from '../src/services/enrollmentService.js';
 import type { AppDeps } from '../src/container.js';
 
 export const STUDENT: StudentRow = {
@@ -129,9 +137,96 @@ export function fakeCourseRepo(rows: CourseRow[] = [courseRow()]) {
   return { repo, calls };
 }
 
+/** 加選用的完整課程資料（sel_total 為基本人數，會再加上假選課資料） */
+export function enrollCourse(overrides: Partial<EnrollCourseRow> = {}): EnrollCourseRow {
+  return {
+    ...courseRow(),
+    cos_dept_no: '4IM',
+    cos_dept: '4IM',
+    chk_max_num: 'Y',
+    chk_min_num: 'Y',
+    chk_over_year: '0',
+    chk_under_year: '9',
+    sel_total: 0,
+    chk_can_del: 'Y',
+    ...overrides,
+  };
+}
+
+const sameKey = (a: CourseKeyParams, b: { cos_id: string; cos_class: string; cos_term: string }) =>
+  a.cosId === b.cos_id && a.cosClass === b.cos_class && a.cosTerm === b.cos_term;
+
+/**
+ * 記憶體版加退選資料：withLocks 依序執行（模擬資料庫鎖），用來測試同時加選不會超收。
+ */
+export function fakeEnrollmentRepo(courses: EnrollCourseRow[] = [enrollCourse()]) {
+  const regs: (CourseKeyParams & { stdNo: string; selType: string })[] = [];
+  const locks: string[][] = [];
+  let queue: Promise<unknown> = Promise.resolve();
+
+  const count = (k: CourseKeyParams) =>
+    regs.filter((r) => r.cosId === k.cosId && r.cosClass === k.cosClass && r.cosTerm === k.cosTerm)
+      .length;
+  const findSelected = async (smtr: string, stdNo: string): Promise<SelectedRow[]> =>
+    regs
+      .filter((r) => r.stdNo === stdNo && r.smtr === smtr)
+      .map((r) => {
+        const c = courses.find((x) => sameKey(r, x))!;
+        return {
+          sel_smtr: r.smtr,
+          sel_cos_id: r.cosId,
+          sel_cos_class: r.cosClass,
+          sel_cos_term: r.cosTerm,
+          sel_cos_type: r.selType,
+          cos_cname: c.cos_cname,
+          cos_credit: c.cos_credit,
+          schd_time: c.schd_time,
+          att_foreignLanguage: c.att_foreignLanguage,
+          cos_crossDisciplinary: c.cos_crossDisciplinary ?? '0',
+        };
+      });
+
+  const tx: EnrollmentTx = {
+    findCourse: async (k) => {
+      const c = courses.find((x) => x.cos_smtr === k.smtr && sameKey(k, x));
+      return c ? { ...c, sel_total: c.sel_total + count(k) } : null;
+    },
+    findSelected,
+    findMoreDept: async () => [],
+    findClashCosIds: async () => [],
+    insert: async (k) => {
+      // 讓出執行權，模擬資料庫延遲，確保真的有交錯的機會
+      await new Promise((r) => setTimeout(r, 5));
+      regs.push(k);
+    },
+    remove: async (k) => {
+      const i = regs.findIndex(
+        (r) =>
+          r.stdNo === k.stdNo &&
+          r.cosId === k.cosId &&
+          r.cosClass === k.cosClass &&
+          r.cosTerm === k.cosTerm,
+      );
+      if (i >= 0) regs.splice(i, 1);
+    },
+  };
+
+  const repo: EnrollmentRepository = {
+    withLocks(resources, fn) {
+      locks.push(resources);
+      const run = queue.then(() => fn(tx));
+      queue = run.catch(() => undefined);
+      return run;
+    },
+    findSelected,
+  };
+  return { repo, regs, locks };
+}
+
 export function makeDeps(
   repoOverrides: Partial<AuthRepository> = {},
   courseRepo: CourseRepository = fakeCourseRepo().repo,
+  enrollmentRepo: EnrollmentRepository = fakeEnrollmentRepo().repo,
 ) {
   const cache = createMemoryCache();
   const captcha = createCaptchaService(cache);
@@ -158,6 +253,7 @@ export function makeDeps(
     tokens,
     auth,
     courses: createCourseService({ repo: courseRepo, contexts }),
+    enrollment: createEnrollmentService({ repo: enrollmentRepo, contexts }),
   };
 
   /** 產生一張驗證碼並回傳正確答案（測試直接讀快取） */

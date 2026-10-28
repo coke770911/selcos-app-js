@@ -26,14 +26,15 @@ const emit = defineEmits<{
   negative: [];
 }>();
 
+// 先通知再關閉：使用端常以「有無待確認資料」決定是否顯示，先關閉會把資料清掉
 function onPositive() {
-  show.value = false;
   emit('positive');
+  show.value = false;
 }
 
 function onNegative() {
-  show.value = false;
   emit('negative');
+  show.value = false;
 }
 </script>
 

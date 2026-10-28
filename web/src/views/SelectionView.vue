@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import { NCard, NEmpty, useMessage } from 'naive-ui';
-import type { CourseKey, CourseListItem } from '@selcos/shared';
+import { computed, onMounted, ref } from 'vue';
+import { NCard, NSpin, useMessage } from 'naive-ui';
+import type { CourseInfo, CourseKey, CourseListItem, SelectedCourse } from '@selcos/shared';
 import TopBar from '@/components/TopBar.vue';
 import NoticeDialog from '@/components/NoticeDialog.vue';
 import CourseFilter from '@/components/CourseFilter.vue';
 import CourseList from '@/components/CourseList.vue';
 import CourseInfoDialog from '@/components/CourseInfoDialog.vue';
+import CourseTimetable from '@/components/CourseTimetable.vue';
 import { coursesApi, type CourseQuery } from '@/api/courses';
 import { errorMessage } from '@/api/http';
 import { useSessionWatch } from '@/composables/useSessionWatch';
@@ -20,6 +21,8 @@ useSessionWatch();
 
 // 進入選課畫面時的重要提醒（舊系統 selcos_main.php）
 const showReminder = ref(true);
+
+onMounted(() => selection.load().catch((err) => message.error(errorMessage(err))));
 
 const courses = ref<CourseListItem[]>([]);
 const loading = ref(false);
@@ -36,6 +39,7 @@ async function search(query: CourseQuery) {
   }
 }
 
+// ---- 課程資訊（清單開啟為加選、課表開啟為退選） ----
 const infoCourse = ref<CourseKey | null>(null);
 const infoAction = ref<'add' | 'drop'>('add');
 const showInfo = ref(false);
@@ -50,9 +54,61 @@ function onInfoClosed(visible: boolean) {
   if (!visible) selection.setPreview(null);
 }
 
-// 加退選在階段 4 實作
-function notReady() {
-  message.info('加退選功能開發中（階段 4）');
+// ---- 加退選結果（同舊系統以彈窗顯示成功或失敗原因） ----
+const result = ref<{ ok: boolean; text: string } | null>(null);
+const showResult = computed({
+  get: () => result.value !== null,
+  set: (v) => {
+    if (!v) result.value = null;
+  },
+});
+
+const key = (c: CourseKey) => ({ cosId: c.cosId, cosClass: c.cosClass, cosTerm: c.cosTerm });
+
+async function add(info: CourseInfo) {
+  try {
+    await selection.add(key(info));
+    result.value = { ok: true, text: '加選成功！' };
+  } catch (err) {
+    result.value = { ok: false, text: errorMessage(err) };
+  }
+}
+
+async function dropNow(info: CourseInfo) {
+  try {
+    await selection.drop(key(info));
+    result.value = { ok: true, text: '退選完成！' };
+  } catch (err) {
+    result.value = { ok: false, text: errorMessage(err) };
+  }
+}
+
+// 舊系統：退選後會低於學分下限時先確認
+const pendingDrop = ref<CourseInfo | null>(null);
+const showDropConfirm = computed({
+  get: () => pendingDrop.value !== null,
+  set: (v) => {
+    if (!v) pendingDrop.value = null;
+  },
+});
+
+function drop(info: CourseInfo) {
+  const credit = selection.state?.credit;
+  if (credit && credit.min !== 0 && credit.min > credit.now - info.credit) {
+    pendingDrop.value = info;
+  } else {
+    void dropNow(info);
+  }
+}
+
+function confirmDrop() {
+  const info = pendingDrop.value;
+  pendingDrop.value = null;
+  if (info) void dropNow(info);
+}
+
+function openFromTimetable(c: SelectedCourse) {
+  openInfo(c, 'drop');
 }
 </script>
 
@@ -66,8 +122,10 @@ function notReady() {
           <CourseList :items="courses" :loading="loading" @select="openInfo($event, 'add')" />
         </div>
       </NCard>
-      <NCard title="🗓️ 我的課表" :bordered="false" class="shadow-md">
-        <NEmpty description="課表與加退選（階段 4–5 實作）" />
+      <NCard title="🗓️ 我的課表" :bordered="false" class="shadow-md" size="small">
+        <NSpin :show="selection.busy">
+          <CourseTimetable :courses="selection.state?.courses ?? []" @select="openFromTimetable" />
+        </NSpin>
       </NCard>
     </main>
 
@@ -76,9 +134,29 @@ function notReady() {
       :course="infoCourse"
       :action="infoAction"
       @update:show="onInfoClosed"
-      @add="notReady"
-      @drop="notReady"
+      @add="add"
+      @drop="drop"
     />
+
+    <NoticeDialog
+      v-model:show="showDropConfirm"
+      type="warning"
+      title="退選確認"
+      positive-text="確定"
+      negative-text="取消"
+      @positive="confirmDrop"
+    >
+      退選課程學分將低於下限！如要退選請按確定。
+    </NoticeDialog>
+
+    <NoticeDialog
+      v-model:show="showResult"
+      :type="result?.ok ? 'success' : 'error'"
+      :title="result?.ok ? '完成' : '無法完成'"
+      dismissible
+    >
+      {{ result?.text }}
+    </NoticeDialog>
 
     <NoticeDialog v-model:show="showReminder" title="重要提醒" positive-text="關閉">
       <ol>
