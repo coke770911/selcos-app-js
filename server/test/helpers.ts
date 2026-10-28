@@ -12,6 +12,8 @@ import type {
 import type { SelectionContextRepository } from '../src/db/repositories/selectionContextRepository.js';
 import { createAuthService } from '../src/services/authService.js';
 import { createSelectionContextStore } from '../src/services/selectionContext.js';
+import { createCourseService } from '../src/services/courseService.js';
+import type { CourseRepository, CourseRow } from '../src/db/repositories/courseRepository.js';
 import type { AppDeps } from '../src/container.js';
 
 export const STUDENT: StudentRow = {
@@ -65,18 +67,84 @@ export function fakeRepo(overrides: Partial<AuthRepository> = {}) {
   return { repo, logs };
 }
 
-export function makeDeps(repoOverrides: Partial<AuthRepository> = {}) {
+/** 假的學期開課資料（1142 學期） */
+export function courseRow(overrides: Partial<CourseRow> = {}): CourseRow {
+  return {
+    cos_smtr: '1142',
+    cos_id: '4IM1001',
+    cos_class: 'A',
+    cos_term: '1',
+    cos_year: '2',
+    cos_sel_type: 'C',
+    cos_credit: 3,
+    cos_cname: '程式設計',
+    cos_ename: 'PROGRAMMING',
+    schd_time: '101,102',
+    chk_can_ins: 'Y',
+    chk_can_del: 'N',
+    chk_college: 'N',
+    chk_dept: 'Y',
+    chk_selcos_dept: 'N',
+    teacher_name: '王老師',
+    dept_name: '資管系',
+    max_std: 50,
+    min_std: 15,
+    memo: '',
+    att_foreignLanguage: '無',
+    att_internship: '否',
+    att_module: '無',
+    att_courseOfStudy: '無',
+    att_distanceLearning: '否',
+    att_licenseProgram: '否',
+    att_cooperativeEducation: '否',
+    att_specPoint: '無',
+    cos_crossDisciplinary: '0',
+    sel_total: 20,
+    ...overrides,
+  };
+}
+
+/** 假的課程查詢：記錄呼叫參數，方便檢查學期是否取自登入資料 */
+export function fakeCourseRepo(rows: CourseRow[] = [courseRow()]) {
+  const calls: unknown[][] = [];
+  const repo: CourseRepository = {
+    findTypes: async () => [{ type_no: '4', type_name: '國際產學專班' }],
+    findDepts: async (smtr) => {
+      calls.push(['findDepts', smtr]);
+      return [{ dept_no: '4IM ', dept_name_s: '資管系', grad_year: 4, dept_type_no: '4' }];
+    },
+    findByDept: async (...args) => {
+      calls.push(['findByDept', ...args]);
+      return rows;
+    },
+    findByPeriod: async (...args) => {
+      calls.push(['findByPeriod', ...args]);
+      return rows;
+    },
+    findInfo: async (...args) => {
+      calls.push(['findInfo', ...args]);
+      return rows.find((r) => r.cos_id === args[1]) ?? null;
+    },
+  };
+  return { repo, calls };
+}
+
+export function makeDeps(
+  repoOverrides: Partial<AuthRepository> = {},
+  courseRepo: CourseRepository = fakeCourseRepo().repo,
+) {
   const cache = createMemoryCache();
   const captcha = createCaptchaService(cache);
   const sessions = createSessionService(cache);
   const tokens = createTokenService('unit-test-secret-unit-test-secret-1234', 1800);
+  const contexts = createSelectionContextStore(cache);
   const { repo, logs } = fakeRepo(repoOverrides);
   const auth = createAuthService({
     captcha,
     ldap: fakeLdap,
     repo,
     contextRepo: fakeContextRepo,
-    contexts: createSelectionContextStore(cache),
+    contexts,
     sessions,
     tokens,
     adminAccounts: ['fz083'],
@@ -89,6 +157,7 @@ export function makeDeps(repoOverrides: Partial<AuthRepository> = {}) {
     sessions,
     tokens,
     auth,
+    courses: createCourseService({ repo: courseRepo, contexts }),
   };
 
   /** 產生一張驗證碼並回傳正確答案（測試直接讀快取） */

@@ -3,10 +3,19 @@ import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { NButton, NTag } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
+import { useSelectionStore } from '@/stores/selection';
 import NoticeDialog from './NoticeDialog.vue';
 
 const auth = useAuthStore();
+const selection = useSelectionStore();
 const router = useRouter();
+
+/** 預覽課程時顯示學分增減（舊系統 #credit_num） */
+const creditDelta = computed(() => {
+  const p = selection.preview;
+  if (!p) return null;
+  return p.action === 'add' ? `+${p.course.credit}` : `-${p.course.credit}`;
+});
 
 const showLogoutConfirm = ref(false);
 const showTimeUp = ref(false);
@@ -64,8 +73,15 @@ onUnmounted(() => clearInterval(timer));
 
       <!-- 目前學分在加退選功能完成後顯示（階段 4） -->
       <div class="text-sm">
-        📚 目前學分 – [ 上 {{ auth.me?.credit?.max ?? '–' }} / 下
-        {{ auth.me?.credit?.min ?? '–' }} ]
+        📚 目前學分 –
+        <strong
+          v-if="creditDelta"
+          class="delta"
+          :class="selection.preview?.action === 'add' ? 'plus' : 'minus'"
+        >
+          {{ creditDelta }}
+        </strong>
+        [ 上 {{ auth.me?.credit?.max ?? '–' }} / 下 {{ auth.me?.credit?.min ?? '–' }} ]
       </div>
 
       <NButton size="small" round type="error" @click="showLogoutConfirm = true">登出</NButton>
@@ -105,5 +121,16 @@ onUnmounted(() => clearInterval(timer));
   position: sticky;
   top: 0;
   z-index: 10;
+}
+.delta {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+}
+.delta.plus {
+  color: #16a34a;
+}
+.delta.minus {
+  color: #e5193b;
 }
 </style>

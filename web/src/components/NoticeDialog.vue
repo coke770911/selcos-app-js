@@ -5,15 +5,18 @@ import { NModal } from 'naive-ui';
  * 共用提示對話框（取代 alert / confirm，不會阻擋瀏覽器）。
  * 內容寫在預設 slot；對話框屬於使用它的元件，離開畫面時會跟著關閉。
  */
-withDefaults(
+const props = withDefaults(
   defineProps<{
     title: string;
     type?: 'info' | 'warning' | 'error' | 'success';
-    positiveText?: string;
+    /** null 時不顯示主要按鈕 */
+    positiveText?: string | null;
     /** 有值才顯示取消按鈕 */
     negativeText?: string;
+    /** 可點遮罩或按 Esc 關閉（一般資訊用；強制提醒維持 false） */
+    dismissible?: boolean;
   }>(),
-  { type: 'info', positiveText: '確定', negativeText: undefined },
+  { type: 'info', positiveText: '確定', negativeText: undefined, dismissible: false },
 );
 
 const show = defineModel<boolean>('show', { required: true });
@@ -40,11 +43,11 @@ function onNegative() {
     preset="dialog"
     :type="type"
     :title="title"
-    :positive-text="positiveText"
+    :positive-text="props.positiveText ?? undefined"
     :negative-text="negativeText"
-    :closable="false"
-    :mask-closable="false"
-    :close-on-esc="false"
+    :closable="dismissible"
+    :mask-closable="dismissible"
+    :close-on-esc="dismissible"
     style="max-width: calc(100vw - 32px)"
     @positive-click="onPositive"
     @negative-click="onNegative"
