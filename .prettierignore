@@ -1,0 +1,5 @@
+dist/
+node_modules/
+server/src/generated/
+server/public/
+package-lock.json

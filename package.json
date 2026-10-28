@@ -1,0 +1,34 @@
+{
+  "name": "selcos-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "亞東科技大學選課系統（Node.js + Vue 3 重構版）",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev:server": "npm run dev -w server",
+    "dev:web": "npm run dev -w web",
+    "build": "npm run build -w server && npm run build -w web",
+    "typecheck": "npm run typecheck -w server && npm run typecheck -w web",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "npm run test -w server"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-vue": "^10.11.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.10",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.0"
+  }
+}

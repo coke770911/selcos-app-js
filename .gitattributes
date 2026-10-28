@@ -1,0 +1,4 @@
+# 一律使用 LF（與 .editorconfig、Prettier 一致），避免 Windows checkout 時轉成 CRLF
+* text=auto eol=lf
+*.ico binary
+*.png binary

@@ -1,0 +1,44 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:pull": "prisma db pull",
+    "db:generate": "prisma generate",
+    "check:db": "tsx scripts/check-db.ts",
+    "check:ldap": "tsx scripts/check-ldap.ts",
+    "check:cache": "tsx scripts/check-cache.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-mssql": "^7.10.1",
+    "@prisma/client": "^7.10.1",
+    "@selcos/shared": "*",
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "ldapts": "^9.2.0",
+    "mssql": "^12.7.10",
+    "pino": "^10.4.0",
+    "pino-pretty": "^13.2.0",
+    "svg-captcha": "^1.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/mssql": "^12.3.0",
+    "@types/node": "^26.6.5",
+    "@types/supertest": "^7.2.1",
+    "prisma": "^7.10.1",
+    "supertest": "^7.3.1",
+    "tsx": "^4.23.15",
+    "vitest": "^5.0.5"
+  }
+}

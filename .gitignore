@@ -1,0 +1,21 @@
+node_modules/
+dist/
+coverage/
+*.log
+
+# 環境參數：只有 server/.env.example 進版控
+.env
+.env.*
+!.env.example
+
+# 前端打包結果（npm run build 產生）
+server/public/
+
+# Prisma 產生的 client
+server/src/generated/
+
+.vscode/*
+!.vscode/extensions.json
+.idea/
+Thumbs.db
+.DS_Store
