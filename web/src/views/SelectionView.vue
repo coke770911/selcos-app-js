@@ -1,17 +1,21 @@
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, ref } from 'vue';
 import { NCard, NSpin, useMessage } from 'naive-ui';
-import type { CourseInfo, CourseKey, CourseListItem, SelectedCourse } from '@selcos/shared';
 import TopBar from '@/components/TopBar.vue';
 import NoticeDialog from '@/components/NoticeDialog.vue';
 import CourseFilter from '@/components/CourseFilter.vue';
 import CourseList from '@/components/CourseList.vue';
 import CourseInfoDialog from '@/components/CourseInfoDialog.vue';
 import CourseTimetable from '@/components/CourseTimetable.vue';
-import { coursesApi, type CourseQuery } from '@/api/courses';
+import { coursesApi } from '@/api/courses';
 import { errorMessage } from '@/api/http';
 import { useSessionWatch } from '@/composables/useSessionWatch';
 import { useSelectionStore } from '@/stores/selection';
+
+/**
+ * @import { CourseInfo, CourseKey, CourseListItem, SelectedCourse } from '@selcos/shared'
+ * @import { CourseQuery } from '@/api/courses'
+ */
 
 const message = useMessage();
 const selection = useSelectionStore();
@@ -24,10 +28,11 @@ const showReminder = ref(true);
 
 onMounted(() => selection.load().catch((err) => message.error(errorMessage(err))));
 
-const courses = ref<CourseListItem[]>([]);
+const courses = ref(/** @type {CourseListItem[]} */ ([]));
 const loading = ref(false);
 
-async function search(query: CourseQuery) {
+/** @param {CourseQuery} query */
+async function search(query) {
   loading.value = true;
   try {
     courses.value = await coursesApi.list(query);
@@ -40,33 +45,44 @@ async function search(query: CourseQuery) {
 }
 
 // ---- 課程資訊（清單開啟為加選、課表開啟為退選） ----
-const infoCourse = ref<CourseKey | null>(null);
-const infoAction = ref<'add' | 'drop'>('add');
+const infoCourse = ref(/** @type {CourseKey | null} */ (null));
+const infoAction = ref(/** @type {'add' | 'drop'} */ ('add'));
 const showInfo = ref(false);
 
-function openInfo(course: CourseKey, action: 'add' | 'drop') {
+/**
+ * @param {CourseKey} course
+ * @param {'add' | 'drop'} action
+ */
+function openInfo(course, action) {
   infoCourse.value = course;
   infoAction.value = action;
   showInfo.value = true;
 }
 
-function onInfoClosed(visible: boolean) {
+/** @param {boolean} visible */
+function onInfoClosed(visible) {
   if (!visible) selection.setPreview(null);
 }
 
 // ---- 加退選結果（同舊系統以彈窗顯示成功或失敗原因） ----
 // 內容與顯示分開：關閉時只隱藏，淡出動畫期間內容不會變成空白的「無法完成」
-const result = ref<{ ok: boolean; text: string }>({ ok: true, text: '' });
+const result = ref({ ok: true, text: '' });
 const showResult = ref(false);
 
-function showOutcome(ok: boolean, text: string) {
+/**
+ * @param {boolean} ok
+ * @param {string} text
+ */
+function showOutcome(ok, text) {
   result.value = { ok, text };
   showResult.value = true;
 }
 
-const key = (c: CourseKey) => ({ cosId: c.cosId, cosClass: c.cosClass, cosTerm: c.cosTerm });
+/** @param {CourseKey} c */
+const key = (c) => ({ cosId: c.cosId, cosClass: c.cosClass, cosTerm: c.cosTerm });
 
-async function add(info: CourseInfo) {
+/** @param {CourseInfo} info */
+async function add(info) {
   try {
     await selection.add(key(info));
     showOutcome(true, '加選成功！');
@@ -75,7 +91,8 @@ async function add(info: CourseInfo) {
   }
 }
 
-async function dropNow(info: CourseInfo) {
+/** @param {CourseInfo} info */
+async function dropNow(info) {
   try {
     await selection.drop(key(info));
     showOutcome(true, '退選完成！');
@@ -85,7 +102,7 @@ async function dropNow(info: CourseInfo) {
 }
 
 // 舊系統：退選後會低於學分下限時先確認
-const pendingDrop = ref<CourseInfo | null>(null);
+const pendingDrop = ref(/** @type {CourseInfo | null} */ (null));
 const showDropConfirm = computed({
   get: () => pendingDrop.value !== null,
   set: (v) => {
@@ -93,7 +110,8 @@ const showDropConfirm = computed({
   },
 });
 
-function drop(info: CourseInfo) {
+/** @param {CourseInfo} info */
+function drop(info) {
   const credit = selection.state?.credit;
   if (credit && credit.min !== 0 && credit.min > credit.now - info.credit) {
     pendingDrop.value = info;
@@ -108,7 +126,8 @@ function confirmDrop() {
   if (info) void dropNow(info);
 }
 
-function openFromTimetable(c: SelectedCourse) {
+/** @param {SelectedCourse} c */
+function openFromTimetable(c) {
   openInfo(c, 'drop');
 }
 </script>

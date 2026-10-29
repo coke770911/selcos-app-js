@@ -1,18 +1,20 @@
 # 選課系統重構規劃（selcos → selcos-app）
 
 舊系統：`D:\project\selcos`（PHP 7.4 + IIS + SQL Server）
-新系統：Node.js 24（≥22）+ Express 5 + TypeScript 6 + Prisma 7 ／ Vue 3 + Vite 8 + Naive UI + UnoCSS（npm workspaces）
+新系統：Node.js 24（≥22）+ Express 5 + Sequelize 6（mssql／tedious）／ Vue 3 + Vite 8 + Naive UI + UnoCSS（npm workspaces）；前後端皆為 JavaScript（ES modules）+ JSDoc，以 `tsc`／`vue-tsc` 的 `checkJs` 做型別檢查
+
+> v1.0.1 起由 TypeScript + Prisma 7 改為 JavaScript + Sequelize：原本的 `$queryRaw`／`$executeRaw` 改為 `sequelize.query` 搭配 `bind` 參數，`$transaction` 改為 Sequelize managed transaction，不定義 model、不使用 sync／migration；API、業務規則與畫面不變。
 
 ---
 
 ## 0. 鐵則
 
-- **正式機資料庫 `172.16.29.1` 開發期間禁止任何 CRUD**（包含 `prisma db pull`、測試腳本、比對腳本）。開發與測試一律連測試機。
+- **正式機資料庫 `172.16.29.1` 開發期間禁止任何 CRUD**（包含檢查腳本、測試腳本、比對腳本）。開發與測試一律連測試機。
   - 程式層防呆：非 `production` 模式時，`DB_HOST` 若為 `172.16.29.1` 直接拒絕啟動。
-  - Prisma CLI（db pull / generate）同樣檢查，指向正式機就中止。
+  - 檢查與比對腳本（`check:*`、`compare:*`）連線前同樣檢查，指向正式機就中止。
 - **正式機 SP 不修改**；新 SP 只在測試機實驗。
 - **正式機只新增資料、不改結構**：登入紀錄繼續寫 `cos_std_loginoutlog`。
-- 不使用 `prisma migrate`。
+- 不使用 Sequelize 的 `sync`／migration，不改動任何資料表。
 - 畫面、操作行為與舊系統一致（RWD、點選節次／清單的操作模式不變），只換技術與視覺風格。
 
 ---
@@ -21,7 +23,7 @@
 
 以 `NODE_ENV` 區分模式，取代舊系統 `TESTMODE`（舊系統 `TESTMODE=1` 為正式，命名相反，不沿用）。
 
-**整個系統只有一個設定檔 `server/.env`**，同一個檔案放正式與測試兩組參數（同舊系統 `env.php` 的 `DB_*` / `TESTDB_*`），用 `NODE_ENV` 切換；範本為 `server/.env.example`。API、Prisma CLI、PM2 都讀同一份檔案，PM2 設定不另外指定 `NODE_ENV`。已存在的系統環境變數不會被覆寫；未設定時預設 `development`。啟動時用 zod 驗證，缺參數直接中止，錯誤訊息會顯示實際該填的參數名稱（例如 `TEST_DB_HOST`）。
+**整個系統只有一個設定檔 `server/.env`**，同一個檔案放正式與測試兩組參數（同舊系統 `env.php` 的 `DB_*` / `TESTDB_*`），用 `NODE_ENV` 切換；範本為 `server/.env.example`。API、檢查腳本、PM2 都讀同一份檔案，PM2 設定不另外指定 `NODE_ENV`。已存在的系統環境變數不會被覆寫；未設定時預設 `development`。啟動時用 zod 驗證，缺參數直接中止，錯誤訊息會顯示實際該填的參數名稱（例如 `TEST_DB_HOST`）。
 
 | 參數                     | development（測試）                 | production（正式）             | 舊系統對應       |
 | ------------------------ | ----------------------------------- | ------------------------------ | ---------------- |
@@ -65,12 +67,11 @@
 selcos-app/
 ├─ shared/            前後端共用型別、錯誤代碼
 ├─ server/
-│  ├─ prisma/         schema.prisma（從測試機 db pull 產生）
 │  ├─ public/         前端打包結果（vite build 輸出，不進版控）
 │  └─ src/
 │     ├─ config/      env 載入與驗證、正式機防呆
 │     ├─ cache/       CacheStore 介面 + memory（之後 redis/Garnet）
-│     ├─ db/          prisma client、repositories、lock（sp_getapplock）
+│     ├─ db/          Sequelize 連線、SqlRunner、repositories、lock（sp_getapplock）
 │     ├─ auth/        ldap、jwt、captcha、middleware
 │     ├─ domain/      gecClassifier、cosTypeLabel
 │     ├─ rules/       加選／退選規則（每條一支純函式）
@@ -178,13 +179,13 @@ DELETE /api/selection
 
 ## 6. 階段
 
-| 階段 | 內容                                                                                                                        | 完成標準                   |
-| ---- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------- |
-| 0    | monorepo（npm workspaces）、TS、ESLint、env 模式、正式機防呆、Express health、Vite 骨架、Prisma 連測試機 db pull、LDAP 測試 | 本機能查到學籍             |
-| 1    | 驗證碼、登入（含代登）、JWT、單一登入、登出紀錄                                                                             | 能登入、能踢舊登入         |
-| 2    | SelectionContextService                                                                                                     | 與舊系統同學號結果一致     |
-| 3    | 課程查詢、課程資訊 API                                                                                                      | 與舊系統一致               |
-| 4    | 規則引擎 + 單元測試 + applock（測試機）                                                                                     | 測試全過、壓測不超收不衝堂 |
-| 5    | 前端畫面                                                                                                                    | 操作一致、RWD              |
-| 6    | 新舊並行比對（測試機）                                                                                                      | 差異為 0 或已說明          |
-| 7    | PM2 + IIS ARR 部署、壓測、切換                                                                                              | 上線                       |
+| 階段 | 內容                                                                                                       | 完成標準                   |
+| ---- | ---------------------------------------------------------------------------------------------------------- | -------------------------- |
+| 0    | monorepo（npm workspaces）、ESLint、env 模式、正式機防呆、Express health、Vite 骨架、測試機連線、LDAP 測試 | 本機能查到學籍             |
+| 1    | 驗證碼、登入（含代登）、JWT、單一登入、登出紀錄                                                            | 能登入、能踢舊登入         |
+| 2    | SelectionContextService                                                                                    | 與舊系統同學號結果一致     |
+| 3    | 課程查詢、課程資訊 API                                                                                     | 與舊系統一致               |
+| 4    | 規則引擎 + 單元測試 + applock（測試機）                                                                    | 測試全過、壓測不超收不衝堂 |
+| 5    | 前端畫面                                                                                                   | 操作一致、RWD              |
+| 6    | 新舊並行比對（測試機）                                                                                     | 差異為 0 或已說明          |
+| 7    | PM2 + IIS ARR 部署、壓測、切換                                                                             | 上線                       |

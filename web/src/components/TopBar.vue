@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { NButton, NTag } from 'naive-ui';
@@ -30,12 +30,14 @@ const countdown = computed(() => {
 });
 const urgent = computed(() => remaining.value <= 60);
 
-async function doLogout(message?: string) {
+/** @param {string} [message] */
+async function doLogout(message) {
   await auth.logout(message).catch(() => undefined);
   await router.replace({ name: 'login' });
 }
 
-let timer: ReturnType<typeof setInterval> | undefined;
+/** @type {ReturnType<typeof setInterval> | undefined} */
+let timer;
 function tick() {
   remaining.value = Math.round((auth.expiresAt - Date.now()) / 1000);
   if (remaining.value <= 0) {

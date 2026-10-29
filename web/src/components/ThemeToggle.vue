@@ -1,4 +1,4 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue';
 import { NButton, NTooltip } from 'naive-ui';
 import { useThemeStore } from '@/stores/theme';
@@ -10,7 +10,7 @@ const LABELS = {
   auto: { icon: '🖥️', text: '跟隨系統' },
   light: { icon: '☀️', text: '亮色' },
   dark: { icon: '🌙', text: '暗色' },
-} as const;
+};
 
 const current = computed(() => LABELS[theme.mode]);
 </script>

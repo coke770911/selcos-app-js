@@ -1,30 +1,30 @@
-<script setup lang="ts">
+<script setup>
 import { NModal } from 'naive-ui';
 
 /**
  * 共用提示對話框（取代 alert / confirm，不會阻擋瀏覽器）。
  * 內容寫在預設 slot；對話框屬於使用它的元件，離開畫面時會跟著關閉。
  */
-const props = withDefaults(
-  defineProps<{
-    title: string;
-    type?: 'info' | 'warning' | 'error' | 'success';
-    /** null 時不顯示主要按鈕 */
-    positiveText?: string | null;
-    /** 有值才顯示取消按鈕 */
-    negativeText?: string;
-    /** 可點遮罩或按 Esc 關閉（一般資訊用；強制提醒維持 false） */
-    dismissible?: boolean;
-  }>(),
-  { type: 'info', positiveText: '確定', negativeText: undefined, dismissible: false },
-);
+const props = defineProps({
+  title: { type: String, required: true },
+  type: {
+    type: /** @type {import('vue').PropType<'info' | 'warning' | 'error' | 'success'>} */ (String),
+    default: 'info',
+  },
+  /** null 時不顯示主要按鈕 */
+  positiveText: {
+    type: /** @type {import('vue').PropType<string | null>} */ ([String, null]),
+    default: '確定',
+  },
+  /** 有值才顯示取消按鈕 */
+  negativeText: { type: String, default: undefined },
+  /** 可點遮罩或按 Esc 關閉（一般資訊用；強制提醒維持 false） */
+  dismissible: { type: Boolean, default: false },
+});
 
-const show = defineModel<boolean>('show', { required: true });
+const show = defineModel('show', { type: Boolean, required: true });
 
-const emit = defineEmits<{
-  positive: [];
-  negative: [];
-}>();
+const emit = defineEmits(['positive', 'negative']);
 
 // 先通知再關閉：使用端常以「有無待確認資料」決定是否顯示，先關閉會把資料清掉
 function onPositive() {

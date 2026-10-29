@@ -1,18 +1,27 @@
-<script setup lang="ts">
+<script setup>
 import { NEmpty, NSpin } from 'naive-ui';
-import type { CourseListItem } from '@selcos/shared';
 import { useKindColor } from '@/composables/useKindColor';
 import { useSelectionStore } from '@/stores/selection';
 
+/**
+ * @import { PropType } from 'vue'
+ * @import { CourseListItem } from '@selcos/shared'
+ */
+
 /** 課程清單（舊系統 #cos_list）：hover 預覽節次與學分，點選開啟課程資訊 */
-defineProps<{ items: CourseListItem[]; loading: boolean }>();
-const emit = defineEmits<{ select: [course: CourseListItem] }>();
+defineProps({
+  items: { type: /** @type {PropType<CourseListItem[]>} */ (Array), required: true },
+  loading: { type: Boolean, required: true },
+});
+const emit = defineEmits({ select: (/** @type {CourseListItem} */ _course) => true });
 
 const selection = useSelectionStore();
 const kindColor = useKindColor();
-const colorOf = (c: CourseListItem) => kindColor(c.label.kind);
+/** @param {CourseListItem} c */
+const colorOf = (c) => kindColor(c.label.kind);
 
-function select(course: CourseListItem) {
+/** @param {CourseListItem} course */
+function select(course) {
   // 手機沒有 hover：點選時先標示節次，再開課程資訊
   selection.setPreview(course, 'add');
   emit('select', course);

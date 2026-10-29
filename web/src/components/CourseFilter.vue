@@ -1,22 +1,26 @@
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue';
 import { NButton, NRadioButton, NRadioGroup, NSelect } from 'naive-ui';
-import type { CourseFilters } from '@selcos/shared';
-import { coursesApi, type CourseQuery } from '@/api/courses';
+import { coursesApi } from '@/api/courses';
 import { useAuthStore } from '@/stores/auth';
 import { PERIODS, WEEKDAYS } from '@/courseKind';
 
+/**
+ * @import { CourseFilters, SessionUser } from '@selcos/shared'
+ * @import { CourseQuery } from '@/api/courses'
+ */
+
 /** 查詢條件（舊系統 selcos_main.php 左側查詢區） */
-const emit = defineEmits<{ search: [query: CourseQuery] }>();
+const emit = defineEmits({ search: (/** @type {CourseQuery} */ _query) => true });
 
 const auth = useAuthStore();
-const filters = ref<CourseFilters | null>(null);
+const filters = ref(/** @type {CourseFilters | null} */ (null));
 const loading = ref(false);
 
-const mode = ref<'dept' | 'time'>('dept');
-const typeNo = ref<string | null>(null);
-const deptNo = ref<string | null>(null);
-const year = ref<string | null>(null);
+const mode = ref(/** @type {'dept' | 'time'} */ ('dept'));
+const typeNo = ref(/** @type {string | null} */ (null));
+const deptNo = ref(/** @type {string | null} */ (null));
+const year = ref(/** @type {string | null} */ (null));
 const weekday = ref('1');
 const period = ref('01');
 
@@ -60,7 +64,11 @@ function search() {
   emit(
     'search',
     mode.value === 'dept'
-      ? { mode: 'dept', deptNo: deptNo.value!, year: year.value! }
+      ? {
+          mode: 'dept',
+          deptNo: /** @type {string} */ (deptNo.value),
+          year: /** @type {string} */ (year.value),
+        }
       : { mode: 'time', weekday: weekday.value, period: period.value },
   );
 }
@@ -73,7 +81,7 @@ onMounted(async () => {
     const user = auth.me?.user;
     typeNo.value = user?.typeNo ?? typeOptions.value[0]?.value ?? null;
     deptNo.value = deptOptions.value.some((o) => o.value === user?.deptNo)
-      ? user!.deptNo
+      ? /** @type {SessionUser} */ (user).deptNo
       : (deptOptions.value[0]?.value ?? null);
     const preferredYear = String(user?.currentDegree ?? user?.degree ?? '');
     year.value = yearOptions.value.some((o) => o.value === preferredYear)

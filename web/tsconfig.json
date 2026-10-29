@@ -6,10 +6,9 @@
     "moduleResolution": "Bundler",
     "jsx": "preserve",
     "types": ["vite/client"],
-    "noEmit": true,
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.vue", "vite.config.ts", "uno.config.ts"]
+  "include": ["src/**/*.js", "src/**/*.vue", "vite.config.js", "uno.config.js"]
 }

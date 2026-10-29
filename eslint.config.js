@@ -1,26 +1,24 @@
 import js from '@eslint/js';
-import tseslint from 'typescript-eslint';
 import pluginVue from 'eslint-plugin-vue';
 import prettier from 'eslint-config-prettier/flat';
 import globals from 'globals';
 
-export default tseslint.config(
+export default [
   {
-    ignores: ['**/dist/**', '**/node_modules/**', 'server/src/generated/**', 'server/public/**'],
+    ignores: ['**/dist/**', '**/node_modules/**', 'server/public/**'],
   },
   js.configs.recommended,
-  ...tseslint.configs.recommended,
   ...pluginVue.configs['flat/recommended'],
   {
-    files: ['**/*.vue'],
-    languageOptions: { parserOptions: { parser: tseslint.parser } },
+    files: ['**/*.{js,vue}'],
+    languageOptions: { ecmaVersion: 'latest', sourceType: 'module' },
   },
   {
-    files: ['server/**/*.ts'],
+    files: ['server/**/*.js', 'shared/**/*.js', '*.js', 'web/vite.config.js', 'web/uno.config.js'],
     languageOptions: { globals: globals.node },
   },
   {
-    files: ['web/**/*.{ts,vue}'],
+    files: ['web/src/**/*.{js,vue}'],
     languageOptions: { globals: globals.browser },
     rules: {
       // 彈窗一律用 Vue 元件（NoticeDialog），不用會阻擋瀏覽器的 alert / confirm / prompt
@@ -43,9 +41,9 @@ export default tseslint.config(
   },
   {
     rules: {
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
   // 排版交給 Prettier，關掉會衝突的規則
   prettier,
-);
+];

@@ -1,16 +1,22 @@
-<script setup lang="ts">
+<script setup>
 import { computed } from 'vue';
-import type { SelectedCourse } from '@selcos/shared';
 import { PERIODS } from '@/courseKind';
 import { useKindColor } from '@/composables/useKindColor';
 import { useSelectionStore } from '@/stores/selection';
 
 /**
+ * @import { PropType } from 'vue'
+ * @import { SelectedCourse } from '@selcos/shared'
+ */
+
+/**
  * 課表 7 天 × 15 節（舊系統 #cos_table）。
  * 預覽中的節次加底色；加選預覽與現有課程衝堂時標紅。點課程開啟課程資訊（退選）。
  */
-const props = defineProps<{ courses: SelectedCourse[] }>();
-const emit = defineEmits<{ select: [course: SelectedCourse] }>();
+const props = defineProps({
+  courses: { type: /** @type {PropType<SelectedCourse[]>} */ (Array), required: true },
+});
+const emit = defineEmits({ select: (/** @type {SelectedCourse} */ _course) => true });
 
 const selection = useSelectionStore();
 const kindColor = useKindColor();
@@ -18,21 +24,26 @@ const DAYS = ['一', '二', '三', '四', '五', '六', '日'];
 
 /** 節次代碼（例如 301）→ 該節的課 */
 const byPeriod = computed(() => {
-  const map = new Map<string, SelectedCourse[]>();
+  /** @type {Map<string, SelectedCourse[]>} */
+  const map = new Map();
   for (const c of props.courses) {
     for (const p of c.periods) map.set(p, [...(map.get(p) ?? []), c]);
   }
   return map;
 });
 
-function cellClass(code: string) {
+/** @param {string} code */
+function cellClass(code) {
   if (!selection.previewPeriods.has(code)) return '';
   const conflict = selection.preview?.action === 'add' && byPeriod.value.has(code);
   return conflict ? 'cell-conflict' : 'cell-preview';
 }
 
-/** 舊系統：英語授課粉紅、跨域青色；其餘依類別顏色 */
-function chipStyle(c: SelectedCourse) {
+/**
+ * 舊系統：英語授課粉紅、跨域青色；其餘依類別顏色
+ * @param {SelectedCourse} c
+ */
+function chipStyle(c) {
   if (c.crossDisciplinary) return { '--chip': '#14b8c4' };
   if (c.foreignLanguage === '英語') return { '--chip': '#f07a8c' };
   return { '--chip': kindColor(c.label.kind) };

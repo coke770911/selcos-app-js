@@ -1,12 +1,13 @@
-<script setup lang="ts">
+<script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { NAlert, NButton, NCard, NForm, NFormItem, NInput, NTag, useMessage } from 'naive-ui';
-import type { CaptchaResponse, ScheduleItem } from '@selcos/shared';
 import { errorMessage, http } from '@/api/http';
 import { useAuthStore } from '@/stores/auth';
 import { useAppInfoStore } from '@/stores/appInfo';
 import ThemeToggle from '@/components/ThemeToggle.vue';
+
+/** @import { CaptchaResponse, ScheduleItem } from '@selcos/shared' */
 
 const router = useRouter();
 const message = useMessage();
@@ -14,20 +15,20 @@ const auth = useAuthStore();
 const appInfo = useAppInfoStore();
 
 const form = ref({ account: '', password: '', captcha: '' });
-const captcha = ref<CaptchaResponse | null>(null);
-const captchaInput = ref<InstanceType<typeof NInput> | null>(null);
+const captcha = ref(/** @type {CaptchaResponse | null} */ (null));
+const captchaInput = ref(/** @type {InstanceType<typeof NInput> | null} */ (null));
 const submitting = ref(false);
 
-const schedule = ref<ScheduleItem[] | null>(null);
+const schedule = ref(/** @type {ScheduleItem[] | null} */ (null));
 const scheduleError = ref(false);
-const online = ref<number | null>(null);
+const online = ref(/** @type {number | null} */ (null));
 const now = ref(new Date());
 const sessionMinutes = computed(() => Math.round((appInfo.info?.sessionTtlSeconds ?? 1800) / 60));
 
 async function refreshCaptcha() {
   form.value.captcha = '';
   try {
-    captcha.value = (await http.get<CaptchaResponse>('/auth/captcha')).data;
+    captcha.value = (await http.get('/auth/captcha')).data;
   } catch {
     captcha.value = null;
   }
@@ -55,16 +56,17 @@ async function submit() {
   }
 }
 
-let timer: ReturnType<typeof setInterval> | undefined;
+/** @type {ReturnType<typeof setInterval> | undefined} */
+let timer;
 onMounted(async () => {
   timer = setInterval(() => (now.value = new Date()), 1000);
   void refreshCaptcha();
   http
-    .get<ScheduleItem[]>('/public/schedule')
+    .get('/public/schedule')
     .then((r) => (schedule.value = r.data))
     .catch(() => (scheduleError.value = true));
   http
-    .get<{ count: number }>('/public/online')
+    .get('/public/online')
     .then((r) => (online.value = r.data.count))
     .catch(() => undefined);
 });

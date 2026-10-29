@@ -1,10 +1,12 @@
 # 選課系統（selcos-app）
 
-亞東科技大學選課系統重構版，版本 **1.0.0**（以根目錄 `package.json` 為準）。
+亞東科技大學選課系統重構版，版本 **1.0.1**（以根目錄 `package.json` 為準）。
 
-由舊系統（PHP，位於 `D:\project\selcos`）重構為 Node.js + Express + TypeScript ／ Vue 3。功能、規則與操作方式以舊系統為準。
+由舊系統（PHP，位於 `D:\project\selcos`）重構為 Node.js + Express + Sequelize ／ Vue 3（前後端皆為 JavaScript，以 JSDoc 標註型別）。功能、規則與操作方式以舊系統為準。
 
-> ⚠️ 正式機資料庫 `172.16.29.1` 開發期間禁止任何讀寫。非 production 模式指向正式機（含網域名稱解析）時，API 與 Prisma CLI 都會拒絕執行。
+> 此版本由 Prisma／TypeScript 版（v1.0.0）改寫而來：資料存取改用 Sequelize，程式改為 JavaScript，API、業務規則與畫面行為不變。
+
+> ⚠️ 正式機資料庫 `172.16.29.1` 開發期間禁止任何讀寫。非 production 模式指向正式機（含網域名稱解析）時，API 與所有檢查、比對腳本都會拒絕執行。
 
 相關文件：
 
@@ -16,7 +18,7 @@
 
 | 階段 | 內容                                                                       | 狀態   |
 | ---- | -------------------------------------------------------------------------- | ------ |
-| 0    | 專案骨架、環境模式、正式機防呆、測試機連線、Prisma db pull                 | ✅     |
+| 0    | 專案骨架、環境模式、正式機防呆、測試機連線                                 | ✅     |
 | 1    | 驗證碼、AD 登入、管理員代登、JWT 單一登入、登入／登出紀錄、被踢下線通知    | ✅     |
 | 2    | 選課前置資料：開放條件、問卷、虛擬年級、學分上下限、通識次數、重修補修清單 | ✅     |
 | 3    | 課程查詢（依系所／依節次）、類別標示、課程資訊                             | ✅     |
@@ -29,12 +31,13 @@
 
 ## 技術架構
 
-| 層   | 技術                                                                                  |
-| ---- | ------------------------------------------------------------------------------------- |
-| 後端 | Node.js 24、Express 5、TypeScript 6、Prisma 7（SQL Server，沿用既有 SP）、ldapts、JWT |
-| 前端 | Vue 3、Vite 8、Pinia、Vue Router、Naive UI、UnoCSS                                    |
-| 測試 | Vitest、supertest（後端 180+ 個測試）、新舊邏輯比對腳本                               |
-| 部署 | PM2 + IIS ARR；前端打包進後端，正式環境只有一個 port（3000）                          |
+| 層   | 技術                                                                                 |
+| ---- | ------------------------------------------------------------------------------------ |
+| 後端 | Node.js 24、Express 5、Sequelize 6 + tedious（SQL Server，沿用既有 SP）、ldapts、JWT |
+| 前端 | Vue 3、Vite 8、Pinia、Vue Router、Naive UI、UnoCSS                                   |
+| 型別 | JavaScript（ES modules）+ JSDoc，`tsc`／`vue-tsc` 以 `checkJs` 檢查，不編譯          |
+| 測試 | Vitest、supertest（後端 180+ 個測試）、新舊邏輯比對腳本                              |
+| 部署 | PM2 + IIS ARR；前端打包進後端，正式環境只有一個 port（3000）                         |
 
 ## 目錄結構
 
@@ -45,6 +48,13 @@
 | `web/`    | 前端：`views`、`components`、`stores`、`composables`；打包輸出到 `server/public`           |
 | `deploy/` | PM2（`ecosystem.config.cjs`）與 IIS ARR（`web.config`）設定                                |
 | `docs/`   | 技術文件                                                                                   |
+
+## 資料存取（Sequelize）
+
+- 連線設定在 `server/src/db/connectionConfig.js`（dialect `mssql`、驅動 tedious、`useUTC: false`），由 `server/src/db/sequelize.js` 延遲建立。
+- 查詢一律是原生 SQL（SP、View、跨資料庫 `[CACHE]`），經 `SqlRunner`（`select`／`execute`）呼叫 `sequelize.query`，參數用 `bind`（SQL 內寫 `$名稱`）交給 tedious 參數化，不做字串拼接。
+- 不定義 model、不使用 `sync` 或 migration，不會改動任何資料表。
+- 加退選用 Sequelize managed transaction：`SET XACT_ABORT ON` 後依序 `sp_getapplock`（先學生、後課程，逾時 10 秒回 503），任何錯誤自動 rollback。
 
 ## 環境設定
 
@@ -66,7 +76,6 @@
 ```bash
 npm install
 cp server/.env.example server/.env   # 填入 TEST_DB_* 測試機帳密與 JWT_SECRET
-npm run db:generate -w server        # 產生 Prisma client（不連資料庫）
 npm run dev:server                   # API：http://localhost:3000/api/health
 npm run dev:web                      # 前端：http://localhost:5173（/api 轉給 3000）
 ```
@@ -75,14 +84,13 @@ npm run dev:web                      # 前端：http://localhost:5173（/api 轉
 
 ### 常用指令
 
-| 指令                               | 說明                                                 |
-| ---------------------------------- | ---------------------------------------------------- |
-| `npm test`                         | 後端測試                                             |
-| `npm run typecheck`                | 前後端型別檢查                                       |
-| `npm run lint` ／ `npm run format` | ESLint ／ Prettier                                   |
-| `npm run build`                    | 編譯後端到 `server/dist`、打包前端到 `server/public` |
-| `npm run version:bump`             | 版本修訂號 +1（所有 package.json 與 lock 檔）        |
-| `npm run db:pull -w server`        | 從測試機反向產生 Prisma schema（不可用 migrate）     |
+| 指令                               | 說明                                          |
+| ---------------------------------- | --------------------------------------------- |
+| `npm test`                         | 後端測試                                      |
+| `npm run typecheck`                | 前後端型別檢查（JSDoc，`checkJs`）            |
+| `npm run lint` ／ `npm run format` | ESLint ／ Prettier                            |
+| `npm run build`                    | 後端型別檢查、打包前端到 `server/public`      |
+| `npm run version:bump`             | 版本修訂號 +1（所有 package.json 與 lock 檔） |
 
 ### 測試機檢查與新舊比對（都只連測試機）
 
@@ -97,14 +105,13 @@ npm run dev:web                      # 前端：http://localhost:5173（/api 轉
 
 ## 部署（IIS ARR + PM2）
 
-需求：Node.js **24**（後端執行時會直接載入 `shared` 的 TypeScript，需要 Node 23.6 以上）、PM2、IIS URL Rewrite + ARR。
+需求：Node.js **24**（≥22）、PM2、IIS URL Rewrite + ARR。後端直接以 Node 執行 `server/src`，不需編譯。
 
 ```bash
 npm install -g pm2
-git clone https://github.com/coke770911/selcos-app.git
+git clone <儲存庫網址> selcos-app
 cd selcos-app
 npm ci
-npm run db:generate -w server
 npm run build
 pm2 start deploy/ecosystem.config.cjs
 pm2 save
@@ -114,7 +121,7 @@ pm2 save
 2. IIS 站台放入 `deploy/web.config`，把所有請求轉給 `localhost:3000`。
 3. Windows 開機自動啟動：`npm install -g pm2-windows-startup` 後執行 `pm2-startup install`。
 
-更新版本：`git pull` → `npm ci` → `npm run db:generate -w server` → `npm run build` → `pm2 reload selcos-api`。
+更新版本：`git pull` → `npm ci` → `npm run build` → `pm2 reload selcos-api`。
 
 常用：`pm2 status`、`pm2 logs selcos-api`、`pm2 restart selcos-api`、`pm2 monit`。
 

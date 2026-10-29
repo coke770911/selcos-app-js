@@ -6,7 +6,7 @@ module.exports = {
     {
       name: 'selcos-api',
       cwd: __dirname + '/../server',
-      script: 'dist/index.js',
+      script: 'src/index.js',
       exec_mode: 'fork',
       instances: 1,
       autorestart: true,

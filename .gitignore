@@ -11,9 +11,6 @@ coverage/
 # 前端打包結果（npm run build 產生）
 server/public/
 
-# Prisma 產生的 client
-server/src/generated/
-
 .vscode/*
 !.vscode/extensions.json
 .idea/

@@ -1,22 +1,32 @@
-<script setup lang="ts">
+<script setup>
 import { computed, ref, watch } from 'vue';
 import { NSpin, NTag } from 'naive-ui';
-import type { CourseInfo, CourseKey } from '@selcos/shared';
 import { coursesApi } from '@/api/courses';
 import { errorMessage } from '@/api/http';
 import NoticeDialog from './NoticeDialog.vue';
 
-/** 課程資訊（舊系統 selcos_cos_info.php）：從清單開啟為加選、從課表開啟為退選 */
-const props = defineProps<{ course: CourseKey | null; action: 'add' | 'drop' }>();
-const show = defineModel<boolean>('show', { required: true });
-const emit = defineEmits<{ add: [info: CourseInfo]; drop: [info: CourseInfo] }>();
+/**
+ * @import { PropType } from 'vue'
+ * @import { CourseInfo, CourseKey } from '@selcos/shared'
+ */
 
-const info = ref<CourseInfo | null>(null);
+/** 課程資訊（舊系統 selcos_cos_info.php）：從清單開啟為加選、從課表開啟為退選 */
+const props = defineProps({
+  course: { type: /** @type {PropType<CourseKey | null>} */ ([Object, null]), required: true },
+  action: { type: /** @type {PropType<'add' | 'drop'>} */ (String), required: true },
+});
+const show = defineModel('show', { type: Boolean, required: true });
+const emit = defineEmits({
+  add: (/** @type {CourseInfo} */ _info) => true,
+  drop: (/** @type {CourseInfo} */ _info) => true,
+});
+
+const info = ref(/** @type {CourseInfo | null} */ (null));
 const loading = ref(false);
 const error = ref('');
 
 watch(
-  () => [show.value, props.course] as const,
+  () => /** @type {const} */ ([show.value, props.course]),
   async ([visible, course]) => {
     if (!visible || !course) return;
     info.value = null;
