@@ -4,11 +4,13 @@ import { useRouter } from 'vue-router';
 import { NButton, NTag } from 'naive-ui';
 import { useAuthStore } from '@/stores/auth';
 import { useSelectionStore } from '@/stores/selection';
+import { useAppInfoStore } from '@/stores/appInfo';
 import NoticeDialog from './NoticeDialog.vue';
 import ThemeToggle from './ThemeToggle.vue';
 
 const auth = useAuthStore();
 const selection = useSelectionStore();
+const appInfo = useAppInfoStore();
 const router = useRouter();
 
 /** 預覽課程時顯示學分增減（舊系統 #credit_num） */
@@ -54,6 +56,7 @@ onUnmounted(() => clearInterval(timer));
     <div class="mx-auto max-w-7xl px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
       <div class="flex items-center gap-2 mr-auto">
         <span class="text-lg font-extrabold">選課系統</span>
+        <span v-if="appInfo.info" class="text-xs opacity-70">v{{ appInfo.info.version }}</span>
         <NTag v-if="auth.me" round type="warning" :bordered="false">
           {{ auth.me.env.modeName }} · {{ auth.me.env.smtr }}
         </NTag>

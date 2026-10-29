@@ -88,6 +88,7 @@ onUnmounted(() => clearInterval(timer));
         <div class="mt-2 text-sm opacity-90 flex gap-4 justify-center md:justify-start">
           <span>目前時間：{{ now.toLocaleString('zh-TW', { hour12: false }) }}</span>
           <span v-if="online !== null">線上人數：{{ online }}</span>
+          <span v-if="appInfo.info" class="opacity-75">v{{ appInfo.info.version }}</span>
         </div>
       </header>
 

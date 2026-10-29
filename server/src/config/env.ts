@@ -25,7 +25,6 @@ const prod = isProductionMode(process.env.NODE_ENV);
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']),
   PORT: z.coerce.number().int().positive().default(3000),
-  APP_VERSION: z.string().default('1.0.0'),
   APP_TITLE_SUFFIX: z.string().default(prod ? '' : '[測試]'),
 
   // 選課可用時間（秒），舊系統 $SYSTEMTIME：正式 30 分鐘、測試 5 小時

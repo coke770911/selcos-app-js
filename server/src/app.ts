@@ -3,6 +3,7 @@ import helmet from 'helmet';
 import { ZodError } from 'zod';
 import { ERROR_CODES, type ApiError, type AppInfo, type HealthResponse } from '@selcos/shared';
 import { env } from './config/env.js';
+import { APP_VERSION } from './config/version.js';
 import { logger } from './logger.js';
 import { AppError } from './errors.js';
 import type { AppDeps } from './container.js';
@@ -29,7 +30,7 @@ export function createApp(deps: AppDeps, options: AppOptions = {}) {
     const body: HealthResponse = {
       status: 'ok',
       env: env.NODE_ENV,
-      version: env.APP_VERSION,
+      version: APP_VERSION,
       time: new Date().toISOString(),
     };
     res.json(body);
@@ -39,7 +40,7 @@ export function createApp(deps: AppDeps, options: AppOptions = {}) {
     const body: AppInfo = {
       title: '選課系統',
       titleSuffix: env.APP_TITLE_SUFFIX,
-      version: env.APP_VERSION,
+      version: APP_VERSION,
       env: env.NODE_ENV,
       sessionTtlSeconds: env.SESSION_TTL_SECONDS,
     };

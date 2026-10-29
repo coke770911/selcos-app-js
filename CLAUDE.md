@@ -14,6 +14,13 @@
 2. **優先提取共同元件、減少依賴耦合、遵循既有代碼風格**（命名、註解密度、檔案結構與周圍程式一致）。
 3. **每次修改聚焦單一模組，不要一次全盤翻寫。** 改完一個模組就驗證（測試、型別檢查、lint）再進行下一個。
 
+## 版本規則
+
+- 系統版本號唯一來源是根目錄 `package.json`（`主.次.修訂`），後端由 `server/src/config/version.ts` 讀取並經 `/api/health`、`/api/public/app-info` 提供給前端顯示。
+- **每次 commit 前必須執行 `npm run version:bump`，修訂號 +1**（同步更新所有 workspace 的 package.json 與 package-lock.json），並與該次修改一起提交。
+- commit 訊息第一行以版本開頭，例如 `v1.0.1 修正課表顯示`。
+- 主版號、次版號只在使用者要求時調整。
+
 ## 專案慣例
 
 - npm workspaces：`shared/`（前後端共用型別）、`server/`、`web/`、`deploy/`。
