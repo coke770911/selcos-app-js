@@ -1,6 +1,6 @@
-# 選課系統（selcos-app）
+# 選課系統（selcos-app-js）
 
-亞東科技大學選課系統重構版，版本 **1.0.1**（以根目錄 `package.json` 為準）。
+亞東科技大學選課系統重構版，版本 **1.0.2**（以根目錄 `package.json` 為準）。
 
 由舊系統（PHP，位於 `D:\project\selcos`）重構為 Node.js + Express + Sequelize ／ Vue 3（前後端皆為 JavaScript，以 JSDoc 標註型別）。功能、規則與操作方式以舊系統為準。
 
@@ -109,8 +109,8 @@ npm run dev:web                      # 前端：http://localhost:5173（/api 轉
 
 ```bash
 npm install -g pm2
-git clone <儲存庫網址> selcos-app
-cd selcos-app
+git clone https://github.com/coke770911/selcos-app-js.git
+cd selcos-app-js
 npm ci
 npm run build
 pm2 start deploy/ecosystem.config.cjs

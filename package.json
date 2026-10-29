@@ -1,6 +1,6 @@
 {
-  "name": "selcos-app",
-  "version": "1.0.1",
+  "name": "selcos-app-js",
+  "version": "1.0.2",
   "private": true,
   "description": "亞東科技大學選課系統（Node.js + Vue 3 重構版）",
   "type": "module",

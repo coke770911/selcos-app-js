@@ -1,4 +1,4 @@
-# selcos-app
+# selcos-app-js
 
 亞東科技大學選課系統重構版（PHP → Node.js + Express + Sequelize + JWT ／ Vue 3 + Vite，前後端皆為 JavaScript + JSDoc）。舊系統在 `D:\project\selcos`，功能以舊系統為準。完整規劃見 [PLAN.md](PLAN.md)，指令與部署見 [README.md](README.md)。
 

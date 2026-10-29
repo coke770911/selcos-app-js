@@ -1,4 +1,4 @@
-# 選課系統重構規劃（selcos → selcos-app）
+# 選課系統重構規劃（selcos → selcos-app-js）
 
 舊系統：`D:\project\selcos`（PHP 7.4 + IIS + SQL Server）
 新系統：Node.js 24（≥22）+ Express 5 + Sequelize 6（mssql／tedious）／ Vue 3 + Vite 8 + Naive UI + UnoCSS（npm workspaces）；前後端皆為 JavaScript（ES modules）+ JSDoc，以 `tsc`／`vue-tsc` 的 `checkJs` 做型別檢查
@@ -64,7 +64,7 @@
 ## 3. 架構
 
 ```
-selcos-app/
+selcos-app-js/
 ├─ shared/            前後端共用型別、錯誤代碼
 ├─ server/
 │  ├─ public/         前端打包結果（vite build 輸出，不進版控）
