@@ -77,6 +77,8 @@ export const courseRepository = {
 
   findDepts(smtr) {
     // 舊系統排除 AS（附設）與 CC000 課號
+    // 學期 CAST 成 varchar：tedious 送 nvarchar，直接比較 varchar 欄位無法完整使用索引
+    // （EXEC 預存程序的參數會先轉成 SP 宣告的型別，不受影響）
     return getDb().select(
       `SELECT refDept.dept_no, refDept.dept_name AS dept_name_s,
              refType.gradDegree AS grad_year, refType.type_no AS dept_type_no
@@ -84,7 +86,7 @@ export const courseRepository = {
       INNER JOIN [OIT].[dbo].[ref_dept] AS refDept ON smtrCos.cos_dept_no = refDept.dept_no
       LEFT JOIN [OIT].[dbo].[ref_type] AS refType ON LEFT(smtrCos.cos_dept_no, 1) = refType.type_no
       WHERE SUBSTRING(cos_id, 2, 2) <> 'AS' AND SUBSTRING(cos_id, 2, 5) <> 'CC000'
-        AND smtrCos.cos_smtr = $smtr
+        AND smtrCos.cos_smtr = CAST($smtr AS varchar(50))
       GROUP BY refDept.dept_no, refDept.dept_name, refType.gradDegree, refType.type_no`,
       { smtr },
     );

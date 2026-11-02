@@ -41,7 +41,7 @@ export const useAuthStore = defineStore('auth', () => {
   const notice = ref('');
 
   const expiresAt = computed(() => (me.value ? new Date(me.value.expiresAt).getTime() : 0));
-  const isLoggedIn = computed(() => !!token.value && expiresAt.value > Date.now());
+  const isLoggedIn = computed(() => Boolean(token.value) && expiresAt.value > Date.now());
 
   function clear(message = '') {
     token.value = null;

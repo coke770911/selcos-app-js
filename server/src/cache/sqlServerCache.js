@@ -16,6 +16,7 @@ const MAX_KEY_LENGTH = 128; // php_sessID varchar(128)
  *   php_time         = 到期時間（Unix 秒）
  *   php_stdno        = 'guest'，避免舊系統登入刪除同學號 session、線上人數統計誤算
  * 時間一律取資料庫伺服器的時間，避免多台伺服器時鐘不一致。
+ * 參數一律 CAST 成 varchar：tedious 把字串送成 nvarchar，直接和 varchar 主鍵比較時無法完整使用索引。
  * @param {SqlRunner} db
  * @param {{ cleanupIntervalMs?: number; onError?: (err: unknown) => void }} [options]
  * @returns {CacheStore & { stop(): void; cleanup(): Promise<number> }}
@@ -37,7 +38,7 @@ export function createSqlServerCache(db, options = {}) {
     /** @type {{ v: string }[]} */
     const rows = await db.select(
       `SELECT php_sessionValue AS v FROM [CACHE].[dbo].[tb_Session]
-      WHERE php_sessID = $sid
+      WHERE php_sessID = CAST($sid AS varchar(128))
         AND php_time > DATEDIFF_BIG(SECOND, '19700101', SYSUTCDATETIME())`,
       { sid: id(key) },
     );
@@ -51,7 +52,7 @@ export function createSqlServerCache(db, options = {}) {
   async function cleanup() {
     return db.execute(
       `DELETE FROM [CACHE].[dbo].[tb_Session]
-      WHERE php_sessID LIKE $pattern
+      WHERE php_sessID LIKE CAST($pattern AS varchar(256))
         AND php_time <= DATEDIFF_BIG(SECOND, '19700101', SYSUTCDATETIME())`,
       { pattern: `${KEY_NAMESPACE}%` },
     );
@@ -84,16 +85,17 @@ export function createSqlServerCache(db, options = {}) {
     },
 
     async del(key) {
-      await db.execute(`DELETE FROM [CACHE].[dbo].[tb_Session] WHERE php_sessID = $sid`, {
-        sid: id(key),
-      });
+      await db.execute(
+        `DELETE FROM [CACHE].[dbo].[tb_Session] WHERE php_sessID = CAST($sid AS varchar(128))`,
+        { sid: id(key) },
+      );
     },
 
     async take(key) {
       // 刪除成功（影響 1 筆）才算取得，多台伺服器同時取只會有一台拿到
       const value = await read(key);
       const deleted = await db.execute(
-        `DELETE FROM [CACHE].[dbo].[tb_Session] WHERE php_sessID = $sid`,
+        `DELETE FROM [CACHE].[dbo].[tb_Session] WHERE php_sessID = CAST($sid AS varchar(128))`,
         { sid: id(key) },
       );
       return deleted === 1 ? parse(value) : undefined;
@@ -104,7 +106,7 @@ export function createSqlServerCache(db, options = {}) {
       /** @type {{ n: number }[]} */
       const rows = await db.select(
         `SELECT COUNT(*) AS n FROM [CACHE].[dbo].[tb_Session]
-        WHERE php_sessID LIKE $pattern
+        WHERE php_sessID LIKE CAST($pattern AS varchar(256))
           AND php_time > DATEDIFF_BIG(SECOND, '19700101', SYSUTCDATETIME())`,
         { pattern },
       );

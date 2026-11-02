@@ -43,6 +43,8 @@ const schema = z.object({
   DB_PASS: z.string().min(1),
   DB_ENCRYPT: z.stringbool().default(true),
   DB_TRUST_SERVER_CERT: z.stringbool().default(true),
+  // 每個 Node 程序的連線池上限；總連線數 = 伺服器台數 × PM2 instances × DB_POOL_MAX
+  DB_POOL_MAX: z.coerce.number().int().positive().default(30),
 
   LDAP_URL: z.string().min(1),
   LDAP_DOMAIN: z.string().min(1),

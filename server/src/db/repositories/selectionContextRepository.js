@@ -19,13 +19,16 @@ import { getDb } from '../sequelize.js';
  *   是否已填寫指定學期的期末學習評量問卷
  */
 
+// 查詢條件一律 CAST($參數 AS varchar(50))：tedious 把字串送成 nvarchar，
+// 直接和 varchar／char 欄位比較時無法完整使用索引
+
 /** @type {SelectionContextRepository} */
 export const selectionContextRepository = {
   async findCourseRecords(stdNo) {
     /** @type {{ cosPK: string; passState: boolean }[]} */
     const rows = await getDb().select(
       `SELECT cosPK, passState FROM [OIT].[dbo].[vtSelcos_yearScore]
-      WHERE std_no = $stdNo ORDER BY score ASC`,
+      WHERE std_no = CAST($stdNo AS varchar(50)) ORDER BY score ASC`,
       { stdNo },
     );
     return rows.map((r) => ({ cosPK: r.cosPK.trim(), passed: Boolean(r.passState) }));
@@ -35,7 +38,7 @@ export const selectionContextRepository = {
     /** @type {CreditLimitRow[]} */
     const rows = await getDb().select(
       `SELECT max_credit, min_credit FROM [OIT].[dbo].[cos_std_creditlimit]
-      WHERE type_no = $typeNo AND std_year = $stdYear`,
+      WHERE type_no = CAST($typeNo AS varchar(50)) AND std_year = CAST($stdYear AS varchar(50))`,
       { typeNo, stdYear: String(degree) },
     );
     return rows[0] ?? null;
@@ -48,16 +51,18 @@ export const selectionContextRepository = {
       `SELECT refMustCos.cos_id, refMustCos.cos_term
       FROM [OIT].[dbo].[cos_ref_must_cos] AS refMustCos
       INNER JOIN [OIT].[dbo].[perm_course] AS permCos ON permCos.cos_id = refMustCos.cos_id
-      WHERE entry_year = $academicYear AND dept_no = $deptNo AND team = $team
-        AND cos_smtr < $smtr AND cos_type <> 'E'
+      WHERE entry_year = CAST($academicYear AS varchar(50)) AND dept_no = CAST($deptNo AS varchar(50))
+        AND team = CAST($team AS varchar(50))
+        AND cos_smtr < CAST($smtr AS varchar(50)) AND cos_type <> 'E'
       UNION
       SELECT repulsionCos.repulsion_cos_id AS cos_id, repulsionCos.repulsion_cos_term AS cos_term
       FROM [OIT].[dbo].[cos_ref_must_cos] AS refMustCos
       INNER JOIN [OIT].[dbo].[cos_repulsion] AS repulsionCos
         ON refMustCos.cos_id = repulsionCos.cos_id AND refMustCos.cos_term = repulsionCos.cos_term
       INNER JOIN [OIT].[dbo].[perm_course] AS permCos ON permCos.cos_id = repulsionCos.cos_id
-      WHERE entry_year = $academicYear AND dept_no = $deptNo AND team = $team
-        AND cos_smtr < $smtr AND cos_type <> 'E'`,
+      WHERE entry_year = CAST($academicYear AS varchar(50)) AND dept_no = CAST($deptNo AS varchar(50))
+        AND team = CAST($team AS varchar(50))
+        AND cos_smtr < CAST($smtr AS varchar(50)) AND cos_type <> 'E'`,
       { academicYear, deptNo, team, smtr },
     );
     return rows.map((r) => `${r.cos_id.trim()}_${r.cos_term.trim()}`);
@@ -67,7 +72,7 @@ export const selectionContextRepository = {
     /** @type {{ n: number }[]} */
     const rows = await getDb().select(
       `SELECT COUNT(*) AS n FROM [OIT].[dbo].[cos_std_achieve_check]
-      WHERE achieve_smtr = $smtr AND achieve_stdno = $stdNo`,
+      WHERE achieve_smtr = CAST($smtr AS varchar(50)) AND achieve_stdno = CAST($stdNo AS varchar(50))`,
       { smtr, stdNo },
     );
     return Number(rows[0]?.n ?? 0) > 0;

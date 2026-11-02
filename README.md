@@ -120,8 +120,10 @@ pm2 save
 1. 正式主機放 `server/.env`（`NODE_ENV=production`、正式機 `DB_*`、各台相同的 `JWT_SECRET`）。
 2. IIS 站台放入 `deploy/web.config`，把所有請求轉給 `localhost:3000`。
 3. Windows 開機自動啟動：`npm install -g pm2-windows-startup` 後執行 `pm2-startup install`。
+4. PM2 以 cluster 模式跑 4 個程序（PM2 需 5 版以上才能載入 ESM）。依核心數調整 `deploy/ecosystem.config.cjs` 的 `instances`，並讓「伺服器台數 × instances × `DB_POOL_MAX`」在 DBA 給的資料庫連線預算內。
+5. 上線前在正式主機執行 `npm run check:db -w server`，確認 Node 能連上正式資料庫（開發機曾出現 TLS 握手被中斷，`sqlcmd` 則正常）。
 
-更新版本：`git pull` → `npm ci` → `npm run build` → `pm2 reload selcos-api`。
+更新版本：`git pull` → `npm ci` → `npm run build` → `pm2 reload selcos-api`（cluster 模式逐一重啟，不停機）。
 
 常用：`pm2 status`、`pm2 logs selcos-api`、`pm2 restart selcos-api`、`pm2 monit`。
 

@@ -2,6 +2,7 @@
  * 退選規則（舊系統 ajax_cos_del.php），依舊系統順序檢查。
  * 新增：先確認課程在學生課表中（舊系統未檢查，會留下一筆沒有實際刪除的異動紀錄）。
  */
+import { RULE_SETTINGS } from './ruleSettings.js';
 
 /**
  * @import { SelcosMode } from '@selcos/shared'
@@ -49,7 +50,7 @@ export function checkDrop({ course, ctx, currentCredit, enrolled }) {
   }
 
   // 延修生一律可退，不檢查人數下限
-  if (ctx.student.state !== '06') {
+  if (ctx.student.state !== RULE_SETTINGS.studentState.delayed) {
     if (ctx.rules.checkStudentMin && course.chkMinNum && course.selected <= course.minStudents) {
       return fail('此課程人數低於下限，不可退選。');
     }

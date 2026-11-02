@@ -2,6 +2,7 @@
  * 課程清單的類別標示（舊系統 ajax_selcos_list.php get_cos_info）。
  * 判斷順序與舊系統相同：課別 → 體育／軍訓 → 跨域 → 補修 → 重修，後者覆蓋前者。
  */
+import { RULE_SETTINGS } from './ruleSettings.js';
 
 /** @import { CourseKind, CourseLabel, SelcosMode } from '@selcos/shared' */
 
@@ -23,20 +24,15 @@ const OTHER = { kind: 'other', typeName: '其他', tag: '[選修]' };
 
 /**
  * 體育、軍訓只換顏色與標籤，類別名稱沿用課別
- * @type {Record<string, Pick<CourseLabel, 'kind' | 'tag'>>}
+ * @type {Readonly<Record<string, Pick<CourseLabel, 'kind' | 'tag'>>>}
  */
-const BY_GEC_CODE = {
-  1998: { kind: 'pe', tag: '[體育]' },
-  1999: { kind: 'pe', tag: '[體育]' },
-  1996: { kind: 'military', tag: '[軍訓]' },
-  1997: { kind: 'military', tag: '[軍訓]' },
-};
+const BY_GEC_CODE = RULE_SETTINGS.gec.labels;
 
 /** @type {CourseLabel} */
 const MAKE_UP = { kind: 'makeUp', typeName: '補修', tag: '[補修]' };
 /** @type {CourseLabel} */
 const RETAKE = { kind: 'retake', typeName: '重修', tag: '[重修]' };
-const PE_PREFIXES = ['1CC1998', '1CC1999'];
+const PE_PREFIXES = RULE_SETTINGS.pe.prefixes;
 
 /**
  * @typedef {object} LabelCourse

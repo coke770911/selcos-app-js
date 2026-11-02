@@ -1,7 +1,8 @@
 /**
  * 登入選課的開放條件與虛擬年級（舊系統 process.php）。
- * 純函式：資料由呼叫端查好傳入，方便測試。
+ * 純函式：資料由呼叫端查好傳入，方便測試。學籍狀態、二技學制、特殊身分代碼設定在 ruleSettings.js。
  */
+import { RULE_SETTINGS } from './ruleSettings.js';
 
 /** @import { SelcosMode } from '@selcos/shared' */
 
@@ -28,12 +29,7 @@
  * @property {string} stdType 1 轉系、2 轉學、9 其他特殊身分
  */
 
-const STATE_ENROLLED = '01';
-const STATE_DELAYED = '06';
-/** 二技學制年級需 +2 才對應時段設定的年級欄位 */
-const TWO_YEAR_TYPES = ['2', 'R'];
-/** 轉學、轉系等特殊身分 */
-const SPECIAL_STD_TYPES = ['1', '2', '9'];
+const { studentState, twoYearTypes, specialStdTypes } = RULE_SETTINGS;
 
 export const NOT_OPEN_MESSAGE = '尚未開放您的系別年級選課，詳細請查閱教務處選課時間公告！';
 export const QUESTIONNAIRE_MESSAGE = '您的學期評量問卷尚未填寫完畢，填寫後即可預選。';
@@ -45,12 +41,12 @@ export const QUESTIONNAIRE_MESSAGE = '您的學期評量問卷尚未填寫完畢
  * @returns {boolean}
  */
 export function isOpenForStudent(student, setting) {
-  const degree = TWO_YEAR_TYPES.includes(student.typeNo) ? student.degree + 2 : student.degree;
+  const degree = twoYearTypes.includes(student.typeNo) ? student.degree + 2 : student.degree;
   const degreeFlag = setting[/** @type {keyof EligibilitySetting} */ (`sss_${degree}degree`)];
 
-  if (student.state === STATE_ENROLLED && degreeFlag === 'Y') return true;
-  if (setting.sss_delayDegree === 'Y' && student.state === STATE_DELAYED) return true;
-  if (setting.sss_chk_std_type === 'Y' && SPECIAL_STD_TYPES.includes(student.stdType)) return true;
+  if (student.state === studentState.enrolled && degreeFlag === 'Y') return true;
+  if (setting.sss_delayDegree === 'Y' && student.state === studentState.delayed) return true;
+  if (setting.sss_chk_std_type === 'Y' && specialStdTypes.includes(student.stdType)) return true;
   return false;
 }
 
@@ -97,6 +93,6 @@ export function checkEligibility(input) {
 export function currentDegree(student, mode, smtr) {
   let degree = student.degree;
   if (mode === '1' && smtr.endsWith('1')) degree += 1;
-  if (degree >= 5 && student.state === STATE_DELAYED) degree = 4;
+  if (degree >= 5 && student.state === studentState.delayed) degree = 4;
   return degree;
 }
