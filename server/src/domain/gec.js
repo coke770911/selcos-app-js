@@ -2,7 +2,9 @@
  * 日間部通識課號分類（舊系統 fun_tools.php gec_checkType 與 process.php 通識計次）。
  * 課號格式：第 2–3 碼為 CC 才是通識，第 4–7 碼為分類代碼，例如 1CC1200xx。
  * 修課紀錄的 cosPK 為「課號_冊別」，例如 1CC1001_1。
+ * 分類代碼設定在 ruleSettings.js 的 RULE_SETTINGS.gec。
  */
+import { RULE_SETTINGS } from './ruleSettings.js';
 
 /** @typedef {'P' | 'T' | 'PE' | 'MT' | 'N'} GecType 選課時用的通識類型：P 核心、T 博雅、PE 體育、MT 軍訓、N 其他 */
 
@@ -19,48 +21,30 @@
 /** @typedef {Record<GecPassCategory, number>} GecPassCounts */
 
 /** @type {Record<string, GecType>} */
-const GEC_TYPE_BY_CODE = {
-  ...fill(['1200', '1220', '1230', '1250'], 'P'),
-  ...fill(['1300', '1310', '1320', '1321', '1330', '1331', '1340', '1341', '1350', '1351'], 'T'),
-  ...fill(['1998', '1999', '2998'], 'PE'),
-  ...fill(['1996', '1997', '2023', '2024', '2026', '2027', '2028', '2029'], 'MT'),
-};
+const GEC_TYPE_BY_CODE = byCode(RULE_SETTINGS.gec.types);
 
-/**
- * 國文、英文上下冊依冊別區分
- * @type {Record<string, [first: GecPassCategory, other: GecPassCategory]>}
- */
-const BY_TERM = {
-  1001: ['CH1', 'CH2'],
-  1003: ['EG1', 'EG2'],
-};
+/** 國文、英文上下冊依冊別區分 */
+const BY_TERM = RULE_SETTINGS.gec.byTerm;
 
 /** @type {Record<string, GecPassCategory>} */
-const PASS_CATEGORY_BY_CODE = {
-  1119: 'EG3',
-  ...fill(['1110', '1111', '1112', '1117'], 'EG4'),
-  ...fill(['1113', '1114', '1115', '1116', '1118'], 'EG5'),
-  1200: 'P1',
-  1220: 'P2',
-  1230: 'P3',
-  1250: 'P4',
-  ...fill(['1300', '1310', '1311'], 'T1'),
-  ...fill(['1320', '1321'], 'T2'),
-  ...fill(['1330', '1331'], 'T3'),
-  ...fill(['1340', '1341'], 'T4'),
-  ...fill(['1350', '1351'], 'T5'),
-  ...fill(['1998', '1999'], 'PE'),
-  ...fill(['1996', '1997'], 'MT'),
-};
+const PASS_CATEGORY_BY_CODE = byCode(RULE_SETTINGS.gec.passCategories);
 
 /**
- * @template T
- * @param {string[]} codes
- * @param {T} value
+ * 「類別 → 代碼清單」轉成「代碼 → 類別」查詢表
+ * @template {string} T
+ * @param {Partial<Record<T, readonly string[]>>} codesByValue
  * @returns {Record<string, T>}
  */
-function fill(codes, value) {
-  return Object.fromEntries(codes.map((c) => [c, value]));
+function byCode(codesByValue) {
+  /** @type {Record<string, T>} */
+  const table = {};
+  for (const [value, codes] of /** @type {[T, readonly string[] | undefined][]} */ (
+    Object.entries(codesByValue)
+  )) {
+    // Object.entries 會把鍵放寬成 string，這裡轉回設定檔宣告的類別型別
+    for (const code of codes ?? []) table[code] = value;
+  }
+  return table;
 }
 
 /**

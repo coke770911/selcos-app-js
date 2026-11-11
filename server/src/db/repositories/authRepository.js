@@ -53,6 +53,7 @@ import { getDb } from '../sequelize.js';
 export const authRepository = {
   async findStudent(stdNo) {
     // 20200911 轉系生 dat_std_turn_s → 1；轉學生 dat_std_turn（apply=Y, cancel=N）→ 2
+    // 學號 CAST 成 varchar：tedious 送 nvarchar，直接比較 varchar 欄位無法完整使用索引
     const rows = await getDb().select(
       `SELECT a.std_no, a.chi_name, a.type_no, a.degree, a.class, a.[state],
         CASE
@@ -64,7 +65,7 @@ export const authRepository = {
         a.team, a.dept_no, a.entry_year, a.Academic_year, rp.dept_name_s, rp.grad_year
       FROM [OIT].[dbo].[dat_std_basic] AS a
       INNER JOIN [OIT].[dbo].[ref_dept] AS rp ON a.dept_no = rp.dept_no
-      WHERE a.std_no = $stdNo AND a.[state] IN ('01', '06')`,
+      WHERE a.std_no = CAST($stdNo AS varchar(50)) AND a.[state] IN ('01', '06')`,
       { stdNo },
     );
     return /** @type {StudentRow | undefined} */ (rows[0]) ?? null;

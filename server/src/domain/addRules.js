@@ -1,8 +1,10 @@
 /**
  * 加選規則（舊系統 ajax_cos_add.php），依舊系統順序檢查，第一個不通過的規則回傳訊息。
  * 純函式：課程、前置資料、目前課表與指定系所、同性質課程資料由呼叫端查好傳入。
+ * 特殊課號、門數、學年分界等例外條件設定在 ruleSettings.js。
  */
 import { gecType, liberalArtsPassed } from './gec.js';
+import { RULE_SETTINGS, liberalArtsPolicy, zhNumber } from './ruleSettings.js';
 
 /**
  * @import { SelcosMode } from '@selcos/shared'
@@ -80,30 +82,8 @@ import { gecType, liberalArtsPassed } from './gec.js';
 
 /** @typedef {{ ok: true; selType: string } | { ok: false; message: string }} AddRuleResult */
 
-/** 舊系統寫死的特殊課號 */
-const SPECIAL_COURSES = ['1CC1998Z'];
-/** 112 學年後入學者不可選的博雅世界文明類 */
-const RETIRED_LIBERAL_PREFIX = '1CC132';
-const PE_PREFIXES = ['1CC1998', '1CC1999'];
-/** 核通、博雅重修可修同類（比對前 6 碼） */
-const CHANGEABLE_RETAKE_PREFIXES = [
-  '1CC120',
-  '1CC122',
-  '1CC123',
-  '1CC125',
-  '1CC131',
-  '1CC132',
-  '1CC133',
-  '1CC134',
-  '1CC135',
-];
-/** @type {Record<string, { key: keyof GecPassCounts; name: string }>} */
-const CORE_CATEGORY = {
-  '1CC1200': { key: 'P1', name: '知識創新' },
-  '1CC1220': { key: 'P2', name: '歷史文化' },
-  '1CC1230': { key: 'P3', name: '經典閱讀' },
-  '1CC1250': { key: 'P4', name: '公民素養' },
-};
+const { blockedCourses, retiredLiberalArts, pe, coreCategories, changeableRetakePrefixes } =
+  RULE_SETTINGS;
 
 /** @typedef {(input: AddRuleInput) => string | null} Rule */
 
@@ -112,10 +92,11 @@ const CORE_CATEGORY = {
  * @type {Rule[]}
  */
 const BASIC_RULES = [
-  ({ course }) => (SPECIAL_COURSES.includes(course.cosId) ? '此課程為特殊課程無法加選！' : null),
+  ({ course }) => (blockedCourses.includes(course.cosId) ? '此課程為特殊課程無法加選！' : null),
 
   ({ course, ctx }) =>
-    course.cosId.slice(0, 6) === RETIRED_LIBERAL_PREFIX && Number(ctx.student.academicYear) >= 112
+    course.cosId.slice(0, 6) === retiredLiberalArts.prefix &&
+    Number(ctx.student.academicYear) >= retiredLiberalArts.fromAcademicYear
       ? '此課程非課綱內通識，無法加選！'
       : null,
 
@@ -153,13 +134,18 @@ const BASIC_RULES = [
       : null;
   },
 
-  // 體育：最多修畢 4 門；每學期 1 門（未擋修且 3 年級以上可 2 門）
+  // 體育：最多修畢 pe.required 門；每學期 pe.perSemester 門（未擋修且高年級可多選）
   ({ course, ctx, current }) => {
     if (gecType(course.cosId) !== 'PE') return null;
     const passed = ctx.gec.PE;
-    const perSemester = !ctx.rules.checkPrerequisite && ctx.currentDegree >= 3 ? 2 : 1;
-    if (passed >= 4) return `您已修${passed}門體育課程！，不需要再選體育！`;
-    if (current.gec.PE + passed >= 4) return `您已修${passed}門體育課程，最多修畢四門體育！`;
+    const perSemester =
+      !ctx.rules.checkPrerequisite && ctx.currentDegree >= pe.upperDegree.minDegree
+        ? pe.upperDegree.perSemester
+        : pe.perSemester;
+    if (passed >= pe.required) return `您已修${passed}門體育課程！，不需要再選體育！`;
+    if (current.gec.PE + passed >= pe.required) {
+      return `您已修${passed}門體育課程，最多修畢${zhNumber(pe.required)}門體育！`;
+    }
     if (current.gec.PE >= perSemester) return `您這學期已選過${current.gec.PE}門體育課程！`;
     return null;
   },
@@ -167,26 +153,21 @@ const BASIC_RULES = [
   // 核心通識：每類只需修過一次
   ({ course, ctx }) => {
     if (course.selType !== 'P') return null;
-    const category = CORE_CATEGORY[course.cosId.slice(0, 7)];
+    const category = coreCategories[course.cosId.slice(0, 7)];
     return category && ctx.gec[category.key] >= 1 ? `您已選過核心通識[${category.name}]類！` : null;
   },
 
-  // 博雅通識：112 學年後 4 門（至少 2 類），之前 5 門（至少 3 類）
+  // 博雅通識：應修門數依入學學年度（ruleSettings.liberalArts）
   ({ course, ctx, current }) => {
     if (course.selType !== 'T') return null;
     const passed = liberalArtsPassed(ctx.gec);
-    if (Number(ctx.student.academicYear) >= 112) {
-      if (passed >= 4)
-        return '您已修過四門博雅通識不需再選，請確認博雅通識類別是否已修過二類以上！';
-      if (passed + current.gec.T >= 4) {
-        return '您已修過博雅通識與目前加選的博雅通識，已達四門博雅通識無法再加選！';
-      }
-    } else {
-      if (passed >= 5)
-        return '您已修過五門博雅通識不需再選，請確認博雅通識類別是否已修過三類以上！';
-      if (passed + current.gec.T >= 5) {
-        return '您已修過博雅通識與目前加選的博雅通識，已達五門博雅通識無法再加選！';
-      }
+    const { required, minCategories } = liberalArtsPolicy(ctx.student.academicYear);
+    const count = zhNumber(required);
+    if (passed >= required) {
+      return `您已修過${count}門博雅通識不需再選，請確認博雅通識類別是否已修過${zhNumber(minCategories)}類以上！`;
+    }
+    if (passed + current.gec.T >= required) {
+      return `您已修過博雅通識與目前加選的博雅通識，已達${count}門博雅通識無法再加選！`;
     }
     return null;
   },
@@ -225,7 +206,7 @@ export function resolveRetake(course, ctx) {
     if (selType === 'P' || selType === 'T') {
       check = `${course.cosId.slice(0, 7)}_${course.cosTerm}`;
       if (
-        CHANGEABLE_RETAKE_PREFIXES.includes(val.slice(0, 6)) &&
+        changeableRetakePrefixes.includes(val.slice(0, 6)) &&
         check.slice(0, 6) === val.slice(0, 6)
       ) {
         skip = true;
@@ -234,7 +215,7 @@ export function resolveRetake(course, ctx) {
       }
     }
     if (
-      PE_PREFIXES.includes(course.cosId.slice(0, 7)) &&
+      pe.prefixes.includes(course.cosId.slice(0, 7)) &&
       course.cosId.slice(0, 6) === val.slice(0, 6)
     ) {
       skip = true;
@@ -270,7 +251,7 @@ function checkConditions({ course, ctx, moreDept }) {
   }
 
   // 設定檢查年級，或非延修生，都要檢查年級範圍
-  if (ctx.rules.checkDegree || ctx.student.state !== '06') {
+  if (ctx.rules.checkDegree || ctx.student.state !== RULE_SETTINGS.studentState.delayed) {
     const degree = ctx.currentDegree;
     if (!(degree > course.overYear && degree < course.underYear)) {
       return degreeMessage(course.overYear, course.underYear);

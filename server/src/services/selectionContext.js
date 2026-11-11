@@ -6,6 +6,7 @@ import { checkEligibility, currentDegree, requiresQuestionnaire } from '../domai
 import { creditLimit } from '../domain/creditLimit.js';
 import { countGecPassed } from '../domain/gec.js';
 import { buildRetakeLists } from '../domain/retake.js';
+import { RULE_SETTINGS } from '../domain/ruleSettings.js';
 
 /**
  * @import { SelcosMode } from '@selcos/shared'
@@ -15,9 +16,6 @@ import { buildRetakeLists } from '../domain/retake.js';
  * @import { SelcosSettingRow, StudentRow } from '../db/repositories/authRepository.js'
  * @import { SelectionContextRepository } from '../db/repositories/selectionContextRepository.js'
  */
-
-/** 轉學轉系等需要補修的特殊身分 */
-const MAKE_UP_STD_TYPES = ['1', '2', '9'];
 
 /**
  * @typedef {object} SelectionContext
@@ -103,7 +101,8 @@ export async function buildSelectionContext(input) {
   if (error) return { ok: false, message: error };
 
   const nowDegree = currentDegree({ degree, state: student.state }, mode, smtr);
-  const needsMakeUp = mode !== '1' && MAKE_UP_STD_TYPES.includes(student.stdType);
+  // 轉學轉系等特殊身分才需要查應修必修課（補修）
+  const needsMakeUp = mode !== '1' && RULE_SETTINGS.specialStdTypes.includes(student.stdType);
 
   const [records, creditRow, mustCourses] = await Promise.all([
     repo.findCourseRecords(stdNo),

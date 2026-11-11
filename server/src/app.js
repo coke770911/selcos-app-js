@@ -1,11 +1,12 @@
 import express from 'express';
 import helmet from 'helmet';
+import { ConnectionAcquireTimeoutError } from 'sequelize';
 import { ZodError } from 'zod';
 import { ERROR_CODES } from '@selcos/shared';
 import { env } from './config/env.js';
 import { APP_VERSION } from './config/version.js';
 import { logger } from './logger.js';
-import { AppError } from './errors.js';
+import { AppError, busyError } from './errors.js';
 import { authRouter } from './routes/auth.js';
 import { coursesRouter } from './routes/courses.js';
 import { selectionRouter } from './routes/selection.js';
@@ -92,6 +93,15 @@ export function createApp(deps, options = {}) {
       /** @type {ApiError} */
       const body = { code: ERROR_CODES.BAD_REQUEST, message: '輸入資料格式錯誤。' };
       res.status(400).json(body);
+      return;
+    }
+    // 連線池滿載（選課尖峰）：快速回忙碌，讓使用者稍後重試
+    if (err instanceof ConnectionAcquireTimeoutError) {
+      logger.warn({ url: req.originalUrl }, 'db pool acquire timeout');
+      const busy = busyError();
+      /** @type {ApiError} */
+      const body = { code: busy.code, message: busy.message };
+      res.status(busy.status).json(body);
       return;
     }
     logger.error({ err, url: req.originalUrl }, 'unhandled error');
